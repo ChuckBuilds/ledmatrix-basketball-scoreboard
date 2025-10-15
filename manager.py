@@ -74,12 +74,98 @@ class BasketballScoreboardPlugin(BasePlugin):
             self.initialized = False
             return
 
-        # Configuration - per-league structure like original managers
+        # Configuration - flattened structure for plugin system compatibility
         self.leagues = {
-            'nba': config.get('nba', {}),
-            'ncaam_basketball': config.get('ncaam_basketball', {}),
-            'ncaaw_basketball': config.get('ncaaw_basketball', {}),
-            'wnba': config.get('wnba', {})
+            'nba': {
+                'enabled': config.get('nba_enabled', True),
+                'favorite_teams': config.get('nba_favorite_teams', []),
+                'display_modes': {
+                    'live': config.get('nba_display_modes_live', True),
+                    'recent': config.get('nba_display_modes_recent', True),
+                    'upcoming': config.get('nba_display_modes_upcoming', True)
+                },
+                'recent_games_to_show': config.get('nba_recent_games_to_show', 5),
+                'upcoming_games_to_show': config.get('nba_upcoming_games_to_show', 1),
+                'background_service': {
+                    'enabled': config.get('nba_background_service_enabled', True),
+                    'max_workers': config.get('nba_background_service_max_workers', 3),
+                    'request_timeout': config.get('nba_background_service_request_timeout', 30),
+                    'max_retries': config.get('nba_background_service_max_retries', 3),
+                    'priority': config.get('nba_background_service_priority', 2)
+                }
+            },
+            'ncaam_basketball': {
+                'enabled': config.get('ncaam_basketball_enabled', False),
+                'live_priority': config.get('ncaam_basketball_live_priority', True),
+                'live_game_duration': config.get('ncaam_basketball_live_game_duration', 20),
+                'show_odds': config.get('ncaam_basketball_show_odds', True),
+                'test_mode': config.get('ncaam_basketball_test_mode', False),
+                'update_interval_seconds': config.get('ncaam_basketball_update_interval_seconds', 3600),
+                'live_update_interval': config.get('ncaam_basketball_live_update_interval', 30),
+                'recent_games_to_show': config.get('ncaam_basketball_recent_games_to_show', 1),
+                'upcoming_games_to_show': config.get('ncaam_basketball_upcoming_games_to_show', 1),
+                'show_favorite_teams_only': config.get('ncaam_basketball_show_favorite_teams_only', True),
+                'favorite_teams': config.get('ncaam_basketball_favorite_teams', []),
+                'display_modes': {
+                    'live': config.get('ncaam_basketball_display_modes_live', True),
+                    'recent': config.get('ncaam_basketball_display_modes_recent', True),
+                    'upcoming': config.get('ncaam_basketball_display_modes_upcoming', True)
+                },
+                'recent_games_to_show_alt': config.get('ncaam_basketball_recent_games_to_show_alt', 5),
+                'upcoming_games_to_show_alt': config.get('ncaam_basketball_upcoming_games_to_show_alt', 1),
+                'logo_dir': config.get('ncaam_basketball_logo_dir', 'assets/sports/ncaa_logos'),
+                'show_records': config.get('ncaam_basketball_show_records', True),
+                'show_all_live': config.get('ncaam_basketball_show_all_live', False)
+            },
+            'ncaaw_basketball': {
+                'enabled': config.get('ncaaw_basketball_enabled', False),
+                'live_priority': config.get('ncaaw_basketball_live_priority', True),
+                'live_game_duration': config.get('ncaaw_basketball_live_game_duration', 20),
+                'show_odds': config.get('ncaaw_basketball_show_odds', True),
+                'test_mode': config.get('ncaaw_basketball_test_mode', False),
+                'update_interval_seconds': config.get('ncaaw_basketball_update_interval_seconds', 3600),
+                'live_update_interval': config.get('ncaaw_basketball_live_update_interval', 30),
+                'recent_games_to_show': config.get('ncaaw_basketball_recent_games_to_show', 1),
+                'upcoming_games_to_show': config.get('ncaaw_basketball_upcoming_games_to_show', 1),
+                'show_favorite_teams_only': config.get('ncaaw_basketball_show_favorite_teams_only', True),
+                'favorite_teams': config.get('ncaaw_basketball_favorite_teams', []),
+                'display_modes': {
+                    'live': config.get('ncaaw_basketball_display_modes_live', True),
+                    'recent': config.get('ncaaw_basketball_display_modes_recent', True),
+                    'upcoming': config.get('ncaaw_basketball_display_modes_upcoming', True)
+                },
+                'recent_games_to_show_alt': config.get('ncaaw_basketball_recent_games_to_show_alt', 5),
+                'upcoming_games_to_show_alt': config.get('ncaaw_basketball_upcoming_games_to_show_alt', 1),
+                'logo_dir': config.get('ncaaw_basketball_logo_dir', 'assets/sports/ncaa_logos'),
+                'show_records': config.get('ncaaw_basketball_show_records', True),
+                'show_all_live': config.get('ncaaw_basketball_show_all_live', False)
+            },
+            'wnba': {
+                'enabled': config.get('wnba_enabled', False),
+                'live_priority': config.get('wnba_live_priority', True),
+                'live_game_duration': config.get('wnba_live_game_duration', 20),
+                'show_odds': config.get('wnba_show_odds', True),
+                'test_mode': config.get('wnba_test_mode', False),
+                'update_interval_seconds': config.get('wnba_update_interval_seconds', 3600),
+                'live_update_interval': config.get('wnba_live_update_interval', 30),
+                'live_odds_update_interval': config.get('wnba_live_odds_update_interval', 3600),
+                'odds_update_interval': config.get('wnba_odds_update_interval', 3600),
+                'recent_update_interval': config.get('wnba_recent_update_interval', 3600),
+                'upcoming_update_interval': config.get('wnba_upcoming_update_interval', 3600),
+                'recent_games_to_show': config.get('wnba_recent_games_to_show', 1),
+                'upcoming_games_to_show': config.get('wnba_upcoming_games_to_show', 1),
+                'show_favorite_teams_only': config.get('wnba_show_favorite_teams_only', True),
+                'logo_dir': config.get('wnba_logo_dir', 'assets/sports/wnba_logos'),
+                'show_records': config.get('wnba_show_records', True),
+                'show_all_live': config.get('wnba_show_all_live', False),
+                'background_service': {
+                    'enabled': config.get('wnba_background_service_enabled', True),
+                    'max_workers': config.get('wnba_background_service_max_workers', 3),
+                    'request_timeout': config.get('wnba_background_service_request_timeout', 30),
+                    'max_retries': config.get('wnba_background_service_max_retries', 3),
+                    'priority': config.get('wnba_background_service_priority', 2)
+                }
+            }
         }
 
         # Global settings
@@ -88,13 +174,6 @@ class BasketballScoreboardPlugin(BasePlugin):
         self.show_records = config.get('show_records', False)
         self.show_ranking = config.get('show_ranking', False)
 
-        # Background service configuration (internal only)
-        self.background_config = {
-            'enabled': True,
-            'request_timeout': 30,
-            'max_retries': 3,
-            'priority': 2
-        }
 
         # State
         self.current_games = []
@@ -230,7 +309,7 @@ class BasketballScoreboardPlugin(BasePlugin):
                 return []
 
             self.logger.info(f"Fetching {league_key} data from ESPN API...")
-            response = requests.get(url, timeout=self.background_config.get('request_timeout', 30))
+            response = requests.get(url, timeout=league_config.get('background_service', {}).get('request_timeout', 30))
             response.raise_for_status()
 
             data = response.json()
