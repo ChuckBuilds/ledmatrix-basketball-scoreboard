@@ -26,10 +26,7 @@
     "basketball_recent",
     "basketball_upcoming"
   ],
-  "dependencies": {
-    "base_classes": [
-      "basketball",
-      "sports"
-    ]
-  }
+  "dependencies": {},
+  "entry_point": "manager.py",
+  "class_name": "BasketballPluginManager"
 }
