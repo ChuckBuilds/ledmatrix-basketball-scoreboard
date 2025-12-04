@@ -721,16 +721,34 @@ class SportsCore(ABC):
         pass
 
     def _fetch_todays_games(self) -> Optional[Dict]:
-        """Fetch only today's games for live updates (not entire season)."""
+        """Fetch current/today's games for live updates (not entire season)."""
         try:
-            now = datetime.now()
-            formatted_date = now.strftime("%Y%m%d")
-            # Fetch todays games only
+            # For NCAA Basketball, use no dates parameter to get current games
+            # This works around the date range limitation
             url = f"https://site.api.espn.com/apis/site/v2/sports/{self.sport}/{self.league}/scoreboard"
-            self.logger.debug(f"Fetching today's games for {self.sport}/{self.league} on date {formatted_date}")
+            
+            # Check cache first (short TTL for live data)
+            cache_key = f"{self.sport_key}_scoreboard_current"
+            cached_data = self.cache_manager.get(cache_key, max_age=300)  # 5 minute cache
+            if cached_data:
+                if isinstance(cached_data, dict) and "events" in cached_data:
+                    self.logger.debug(f"Using cached current scoreboard for {self.sport}/{self.league}")
+                    return cached_data
+            
+            # For NCAA Basketball, don't use dates parameter (it causes 404)
+            # For other sports, use today's date
+            if self.league in ["mens-college-basketball", "womens-college-basketball"]:
+                params = {"limit": 1000}  # No dates parameter
+                self.logger.debug(f"Fetching current games for {self.sport}/{self.league} (no dates)")
+            else:
+                now = datetime.now()
+                formatted_date = now.strftime("%Y%m%d")
+                params = {"dates": formatted_date, "limit": 1000}
+                self.logger.debug(f"Fetching today's games for {self.sport}/{self.league} on date {formatted_date}")
+            
             response = self.session.get(
                 url,
-                params={"dates": formatted_date, "limit": 1000},
+                params=params,
                 headers=self.headers,
                 timeout=10,
             )
@@ -739,7 +757,7 @@ class SportsCore(ABC):
             events = data.get("events", [])
 
             self.logger.info(
-                f"Fetched {len(events)} todays games for {self.sport} - {self.league}"
+                f"Fetched {len(events)} current games for {self.sport} - {self.league}"
             )
             
             # Log status of each game for debugging
@@ -754,10 +772,12 @@ class SportsCore(ABC):
                         f"shortDetail={status_type.get('shortDetail', 'N/A')}"
                     )
             
+            # Cache the result (short TTL for live data)
+            self.cache_manager.set(cache_key, data)
             return {"events": events}
         except requests.exceptions.RequestException as e:
             self.logger.error(
-                f"API error fetching todays games for {self.sport} - {self.league}: {e}"
+                f"API error fetching current games for {self.sport} - {self.league}: {e}"
             )
             return None
 

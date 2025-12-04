@@ -1,11 +1,10 @@
 import logging
-import os
-from datetime import datetime, timedelta
+import time
+from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 import pytz
-import requests
 
 from basketball import Basketball, BasketballLive
 from sports import SportsRecent, SportsUpcoming
@@ -50,108 +49,169 @@ class BaseNCAAWBasketballManager(Basketball):
             f"Display modes - Recent: {self.recent_enabled}, Upcoming: {self.upcoming_enabled}, Live: {self.live_enabled}"
         )
         self.league = "womens-college-basketball"
+        
+        # Cache for team ID lookups
+        self._team_id_cache = {}
+        self._team_id_cache_timestamp = 0
+        self._team_id_cache_duration = 86400  # Cache team IDs for 24 hours
+
+    def _get_team_id(self, team_abbr: str) -> Optional[str]:
+        """Get team ID from abbreviation using ESPN teams endpoint."""
+        # Check cache first
+        current_time = time.time()
+        if (
+            team_abbr in self._team_id_cache
+            and current_time - self._team_id_cache_timestamp < self._team_id_cache_duration
+        ):
+            return self._team_id_cache[team_abbr]
+        
+        try:
+            url = f"https://site.api.espn.com/apis/site/v2/sports/{self.sport}/{self.league}/teams"
+            response = self.session.get(url, params={"limit": 500}, headers=self.headers, timeout=15)
+            response.raise_for_status()
+            data = response.json()
+            
+            teams = data.get("sports", [{}])[0].get("leagues", [{}])[0].get("teams", [])
+            for team_obj in teams:
+                team = team_obj.get("team", {})
+                if team.get("abbreviation", "").upper() == team_abbr.upper():
+                    team_id = team.get("id")
+                    if team_id:
+                        self._team_id_cache[team_abbr] = str(team_id)
+                        self._team_id_cache_timestamp = current_time
+                        return str(team_id)
+            
+            self.logger.warning(f"Team ID not found for abbreviation: {team_abbr}")
+            return None
+        except Exception as e:
+            self.logger.error(f"Error fetching team ID for {team_abbr}: {e}")
+            return None
+
+    def _fetch_team_schedule(self, team_id: str, season_year: int, use_cache: bool = True) -> Optional[Dict]:
+        """Fetch a team's full season schedule."""
+        cache_key = f"{self.sport_key}_team_{team_id}_schedule_{season_year}"
+        
+        # Check cache first
+        if use_cache:
+            cached_data = self.cache_manager.get(cache_key)
+            if cached_data:
+                if isinstance(cached_data, dict) and "events" in cached_data:
+                    self.logger.debug(f"Using cached team schedule for team {team_id}")
+                    return cached_data
+                elif isinstance(cached_data, list):
+                    self.logger.debug(f"Using cached team schedule (legacy format) for team {team_id}")
+                    return {"events": cached_data}
+        
+        try:
+            url = f"https://site.api.espn.com/apis/site/v2/sports/{self.sport}/{self.league}/teams/{team_id}/schedule"
+            response = self.session.get(url, params={"season": str(season_year)}, headers=self.headers, timeout=30)
+            response.raise_for_status()
+            data = response.json()
+            
+            # Extract events from response
+            events = data.get("events", [])
+            result = {"events": events}
+            
+            # Cache the result (long TTL - schedules don't change often)
+            self.cache_manager.set(cache_key, result)
+            self.logger.info(f"Fetched {len(events)} events for team {team_id} season {season_year}")
+            return result
+        except Exception as e:
+            self.logger.error(f"Error fetching team schedule for team {team_id}: {e}")
+            return None
 
     def _fetch_ncaaw_api_data(self, use_cache: bool = True) -> Optional[Dict]:
         """
-        Fetches the full season schedule for NCAA Women's Basketball using background threading.
-        Returns cached data immediately if available, otherwise starts background fetch.
+        Fetches the full season schedule for NCAA Women's Basketball.
+        Uses team schedules for favorite teams (Recent/Upcoming modes).
+        Falls back to current date scoreboard if no favorite teams configured.
         """
         now = datetime.now(pytz.utc)
         season_year = now.year
         # NCAA season typically runs from November to April
         if now.month < 11:
             season_year = now.year - 1
-        datestring = f"{season_year}1101-{season_year+1}0430"
-        cache_key = f"{self.sport_key}_schedule_{season_year}"
-
-        # Check cache first
+        
+        # If favorite teams are configured, use team schedules
+        if self.favorite_teams:
+            combined_cache_key = f"{self.sport_key}_favorite_teams_schedule_{season_year}"
+            
+            # Check combined cache first
+            if use_cache:
+                cached_data = self.cache_manager.get(combined_cache_key)
+                if cached_data:
+                    if isinstance(cached_data, dict) and "events" in cached_data:
+                        self.logger.info(f"Using cached favorite teams schedule for {season_year}")
+                        return cached_data
+                    elif isinstance(cached_data, list):
+                        self.logger.info(f"Using cached favorite teams schedule (legacy format) for {season_year}")
+                        return {"events": cached_data}
+            
+            # Fetch each favorite team's schedule
+            all_events = {}
+            team_ids_found = {}
+            
+            for team_abbr in self.favorite_teams:
+                team_id = self._get_team_id(team_abbr)
+                if team_id:
+                    team_ids_found[team_abbr] = team_id
+                    team_data = self._fetch_team_schedule(team_id, season_year, use_cache=use_cache)
+                    if team_data and "events" in team_data:
+                        # Deduplicate by event ID
+                        for event in team_data["events"]:
+                            event_id = event.get("id")
+                            if event_id:
+                                all_events[event_id] = event
+            
+            if all_events:
+                combined_data = {"events": list(all_events.values())}
+                # Cache combined result
+                self.cache_manager.set(combined_cache_key, combined_data)
+                self.logger.info(
+                    f"Fetched {len(combined_data['events'])} unique events from {len(team_ids_found)} favorite teams"
+                )
+                return combined_data
+            else:
+                self.logger.warning("No events found from favorite teams' schedules")
+                # Fall through to fallback
+        
+        # Fallback: Use current date scoreboard (no dates parameter)
+        # This works when no favorite teams are configured or team schedules fail
+        cache_key = f"{self.sport_key}_scoreboard_current"
+        
         if use_cache:
-            cached_data = self.cache_manager.get(cache_key)
+            cached_data = self.cache_manager.get(cache_key, max_age=300)  # 5 minute cache for live data
             if cached_data:
                 if isinstance(cached_data, dict) and "events" in cached_data:
-                    self.logger.info(f"Using cached schedule for {season_year}")
+                    self.logger.debug("Using cached current scoreboard")
                     return cached_data
-                elif isinstance(cached_data, list):
-                    self.logger.info(
-                        f"Using cached schedule for {season_year} (legacy format)"
-                    )
-                    return {"events": cached_data}
-                else:
-                    self.logger.warning(
-                        f"Invalid cached data format for {season_year}: {type(cached_data)}"
-                    )
-                    self.cache_manager.delete(cache_key)
-
-        # Start background fetch if service is available
-        if self.background_service and self.background_enabled:
-            self.logger.info(
-                f"Starting background fetch for {season_year} season schedule..."
-            )
-
-            def fetch_callback(result):
-                """Callback when background fetch completes."""
-                if result.success:
-                    self.logger.info(
-                        f"Background fetch completed for {season_year}: {len(result.data.get('events'))} events"
-                    )
-                else:
-                    self.logger.error(
-                        f"Background fetch failed for {season_year}: {result.error}"
-                    )
-
-                if season_year in self.background_fetch_requests:
-                    del self.background_fetch_requests[season_year]
-
-            background_config = self.mode_config.get("background_service", {})
-            timeout = background_config.get("request_timeout", 30)
-            max_retries = background_config.get("max_retries", 3)
-            priority = background_config.get("priority", 2)
-
-            request_id = self.background_service.submit_fetch_request(
-                sport="basketball",
-                year=season_year,
-                url=ESPN_NCAAWB_SCOREBOARD_URL,
-                cache_key=cache_key,
-                params={"dates": datestring, "limit": 1000},
+        
+        try:
+            # Use no dates parameter to get current/today's games
+            response = self.session.get(
+                ESPN_NCAAWB_SCOREBOARD_URL,
+                params={"limit": 1000},  # No dates parameter
                 headers=self.headers,
-                timeout=timeout,
-                max_retries=max_retries,
-                priority=priority,
-                callback=fetch_callback,
+                timeout=30,
             )
-
-            self.background_fetch_requests[season_year] = request_id
-
-            partial_data = self._get_weeks_data()
-            if partial_data:
-                return partial_data
-        else:
-            self.logger.warning(
-                "Background service not available, using synchronous fetch"
-            )
-            try:
-                response = self.session.get(
-                    ESPN_NCAAWB_SCOREBOARD_URL,
-                    params={"dates": datestring, "limit": 1000},
-                    headers=self.headers,
-                    timeout=30,
-                )
-                response.raise_for_status()
-                data = response.json()
-
-                self.cache_manager.set(cache_key, data)
-                self.logger.info(f"Synchronously fetched {season_year} season schedule")
-                return data
-
-            except Exception as e:
-                self.logger.error(f"Failed to fetch {season_year} season schedule: {e}")
-                return None
+            response.raise_for_status()
+            data = response.json()
+            
+            # Cache with short TTL (live data changes frequently)
+            self.cache_manager.set(cache_key, data)
+            self.logger.info(f"Fetched {len(data.get('events', []))} events from current scoreboard")
+            return data
+        except Exception as e:
+            self.logger.error(f"Failed to fetch current scoreboard: {e}")
+            return None
 
     def _fetch_data(self) -> Optional[Dict]:
         """Fetch data using shared data mechanism or direct fetch for live."""
         if isinstance(self, NCAAWBasketballLiveManager):
+            # Live mode: Use current date scoreboard (no dates parameter) to show ALL live games
             return self._fetch_todays_games()
         else:
+            # Recent/Upcoming modes: Use team schedules for favorite teams
             return self._fetch_ncaaw_api_data(use_cache=True)
 
 
