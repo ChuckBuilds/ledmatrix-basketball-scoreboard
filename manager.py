@@ -541,7 +541,16 @@ class BasketballScoreboardPlugin(BasePlugin if BasePlugin else object):
                     elif mode_type == 'upcoming' and hasattr(self, 'ncaaw_upcoming'):
                         managers_to_try.append(self.ncaaw_upcoming)
                 
+                # Clear display once at the start if requested (prevents flashing when trying multiple managers)
+                if force_clear:
+                    try:
+                        self.display_manager.clear()
+                        # Don't call update_display here - let the manager render first
+                    except Exception as clear_err:
+                        self.logger.debug(f"Error clearing display: {clear_err}")
+                
                 # Try each manager until one returns True (has content)
+                first_manager = True
                 for current_manager in managers_to_try:
                     if current_manager:
                         # Track which league we're displaying for granular dynamic duration
@@ -555,7 +564,12 @@ class BasketballScoreboardPlugin(BasePlugin if BasePlugin else object):
                             self._current_display_league = 'ncaaw'
                         self._current_display_mode_type = mode_type
                         
-                        result = current_manager.display(force_clear)
+                        # Only pass force_clear to the first manager (we already cleared above)
+                        # Subsequent managers shouldn't clear to avoid flashing
+                        manager_force_clear = force_clear and first_manager
+                        first_manager = False
+                        
+                        result = current_manager.display(manager_force_clear)
                         # If display returned True, we have content to show
                         if result is True:
                             try:
@@ -593,7 +607,8 @@ class BasketballScoreboardPlugin(BasePlugin if BasePlugin else object):
                     )
                 
                 # Clear display when no content available (safety measure)
-                if force_clear:
+                # Only clear if we haven't already cleared above
+                if force_clear and not managers_to_try:
                     try:
                         self.display_manager.clear()
                         self.display_manager.update_display()
