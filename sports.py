@@ -667,6 +667,21 @@ class SportsCore(ABC):
             if away_record in {"0-0", "0-0-0"}:
                 away_record = ""
 
+            # Extract scores, handling both dict and direct value formats
+            def extract_score(team_data):
+                """Extract score from team data, handling dict or direct value."""
+                score = team_data.get("score")
+                if score is None:
+                    return "0"
+                # If score is a dict (e.g., {"value": 75}), extract the value
+                if isinstance(score, dict):
+                    return str(score.get("value", "0"))
+                # If score is already a number or string, convert to string
+                return str(score)
+            
+            home_score = extract_score(home_team)
+            away_score = extract_score(away_team)
+
             details = {
                 "id": game_event.get("id"),
                 "game_time": game_time,
@@ -688,7 +703,7 @@ class SportsCore(ABC):
                 == "STATUS_END_PERIOD",  # Added Period Break check
                 "home_abbr": home_abbr,
                 "home_id": home_team["id"],
-                "home_score": home_team.get("score", "0"),
+                "home_score": home_score,
                 "home_logo_path": self.logo_dir
                 / Path(f"{LogoDownloader.normalize_abbreviation(home_abbr)}.png"),
                 "home_logo_url": home_team["team"].get("logo"),
@@ -696,7 +711,7 @@ class SportsCore(ABC):
                 "away_record": away_record,
                 "away_abbr": away_abbr,
                 "away_id": away_team["id"],
-                "away_score": away_team.get("score", "0"),
+                "away_score": away_score,
                 "away_logo_path": self.logo_dir
                 / Path(f"{LogoDownloader.normalize_abbreviation(away_abbr)}.png"),
                 "away_logo_url": away_team["team"].get("logo"),
