@@ -708,9 +708,19 @@ class SportsCore(ABC):
                     return "0"
                 # If score is a dict (e.g., {"value": 75}), extract the value
                 if isinstance(score, dict):
-                    return str(score.get("value", "0"))
-                # If score is already a number or string, convert to string
-                return str(score)
+                    score_value = score.get("value", 0)
+                else:
+                    score_value = score
+                
+                # Convert to integer to remove decimal points, then to string
+                try:
+                    # Handle string scores that might have decimals
+                    if isinstance(score_value, str):
+                        score_value = float(score_value)
+                    # Convert to int to remove decimals, then to string
+                    return str(int(float(score_value)))
+                except (ValueError, TypeError):
+                    return "0"
             
             home_score = extract_score(home_team)
             away_score = extract_score(away_team)
@@ -1609,8 +1619,18 @@ class SportsRecent(SportsCore):
             # Note: Rankings are now handled in the records/rankings section below
 
             # Final Scores (Centered, same position as live)
-            home_score = str(game.get("home_score", "0"))
-            away_score = str(game.get("away_score", "0"))
+            # Convert scores to integers to remove decimal points
+            def format_score(score):
+                """Format score as integer string, removing decimals."""
+                try:
+                    if isinstance(score, str):
+                        return str(int(float(score)))
+                    return str(int(float(score)))
+                except (ValueError, TypeError):
+                    return "0"
+            
+            home_score = format_score(game.get("home_score", "0"))
+            away_score = format_score(game.get("away_score", "0"))
             score_text = f"{away_score}-{home_score}"
             score_width = draw_overlay.textlength(score_text, font=self.fonts["score"])
             score_x = (display_width - score_width) // 2

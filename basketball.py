@@ -146,9 +146,18 @@ class BasketballLive(Basketball, SportsLive):
             status_y = 1
             self._draw_text_with_outline(draw_overlay, period_clock_text, (status_x, status_y), self.fonts['time'])
 
-            # Scores (centered)
-            home_score = str(game.get("home_score", "0"))
-            away_score = str(game.get("away_score", "0"))
+            # Scores (centered) - convert to integers to remove decimal points
+            def format_score(score):
+                """Format score as integer string, removing decimals."""
+                try:
+                    if isinstance(score, str):
+                        return str(int(float(score)))
+                    return str(int(float(score)))
+                except (ValueError, TypeError):
+                    return "0"
+            
+            home_score = format_score(game.get("home_score", "0"))
+            away_score = format_score(game.get("away_score", "0"))
             score_text = f"{away_score}-{home_score}"
             score_width = draw_overlay.textlength(score_text, font=self.fonts['score'])
             score_x = (display_width - score_width) // 2
