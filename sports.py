@@ -185,10 +185,8 @@ class SportsCore(ABC):
             return False
 
         if not self.current_game:
-            # Clear the display so old content doesn't persist
-            if force_clear:
-                self.display_manager.clear()
-                self.display_manager.update_display()
+            # Don't clear the display when returning False - let the caller handle skipping
+            # Clearing here would show a blank screen before the next mode is displayed
             current_time = time.time()
             if not hasattr(self, "_last_warning_time"):
                 self._last_warning_time = 0

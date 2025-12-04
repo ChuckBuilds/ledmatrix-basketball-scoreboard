@@ -541,15 +541,9 @@ class BasketballScoreboardPlugin(BasePlugin if BasePlugin else object):
                     elif mode_type == 'upcoming' and hasattr(self, 'ncaaw_upcoming'):
                         managers_to_try.append(self.ncaaw_upcoming)
                 
-                # Clear display once at the start if requested (prevents flashing when trying multiple managers)
-                if force_clear:
-                    try:
-                        self.display_manager.clear()
-                        # Don't call update_display here - let the manager render first
-                    except Exception as clear_err:
-                        self.logger.debug(f"Error clearing display: {clear_err}")
-                
                 # Try each manager until one returns True (has content)
+                # Don't clear at the start - let the first successful manager clear when it displays
+                # This prevents blank screens if all managers fail
                 first_manager = True
                 for current_manager in managers_to_try:
                     if current_manager:
@@ -564,7 +558,7 @@ class BasketballScoreboardPlugin(BasePlugin if BasePlugin else object):
                             self._current_display_league = 'ncaaw'
                         self._current_display_mode_type = mode_type
                         
-                        # Only pass force_clear to the first manager (we already cleared above)
+                        # Only pass force_clear to the first manager
                         # Subsequent managers shouldn't clear to avoid flashing
                         manager_force_clear = force_clear and first_manager
                         first_manager = False
@@ -606,14 +600,8 @@ class BasketballScoreboardPlugin(BasePlugin if BasePlugin else object):
                         f"No content available for mode: {display_mode} after trying {len(managers_to_try)} manager(s)"
                     )
                 
-                # Clear display when no content available (safety measure)
-                # Only clear if we haven't already cleared above
-                if force_clear and not managers_to_try:
-                    try:
-                        self.display_manager.clear()
-                        self.display_manager.update_display()
-                    except Exception as clear_err:
-                        self.logger.debug(f"Error clearing display when no content: {clear_err}")
+                # Don't clear the display when returning False - let the caller handle skipping
+                # Clearing here would show a blank screen before the next mode is displayed
                 return False
             
             # Fall back to internal mode cycling if no display_mode provided
@@ -677,13 +665,9 @@ class BasketballScoreboardPlugin(BasePlugin if BasePlugin else object):
                             "Dynamic progress tracking failed: %s", progress_err
                         )
                 else:
-                    # Manager returned False (no content) - ensure display is cleared
-                    if force_clear:
-                        try:
-                            self.display_manager.clear()
-                            self.display_manager.update_display()
-                        except Exception as clear_err:
-                            self.logger.debug(f"Error clearing display when manager returned False: {clear_err}")
+                    # Manager returned False (no content) - don't clear, just return False
+                    # Clearing here would show a blank screen before the next mode is displayed
+                    pass
                 self._evaluate_dynamic_cycle_completion()
                 return result
             else:
