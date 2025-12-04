@@ -545,13 +545,13 @@ class BasketballScoreboardPlugin(BasePlugin if BasePlugin else object):
                 for current_manager in managers_to_try:
                     if current_manager:
                         # Track which league we're displaying for granular dynamic duration
-                        if current_manager == self.nba_live or current_manager == self.nba_recent or current_manager == self.nba_upcoming:
+                        if hasattr(self, 'nba_live') and (current_manager == self.nba_live or current_manager == self.nba_recent or current_manager == self.nba_upcoming):
                             self._current_display_league = 'nba'
-                        elif current_manager == self.wnba_live or current_manager == self.wnba_recent or current_manager == self.wnba_upcoming:
+                        elif hasattr(self, 'wnba_live') and (current_manager == self.wnba_live or current_manager == self.wnba_recent or current_manager == self.wnba_upcoming):
                             self._current_display_league = 'wnba'
-                        elif current_manager == self.ncaam_live or current_manager == self.ncaam_recent or current_manager == self.ncaam_upcoming:
+                        elif hasattr(self, 'ncaam_live') and (current_manager == self.ncaam_live or current_manager == self.ncaam_recent or current_manager == self.ncaam_upcoming):
                             self._current_display_league = 'ncaam'
-                        elif current_manager == self.ncaaw_live or current_manager == self.ncaaw_recent or current_manager == self.ncaaw_upcoming:
+                        elif hasattr(self, 'ncaaw_live') and (current_manager == self.ncaaw_live or current_manager == self.ncaaw_recent or current_manager == self.ncaaw_upcoming):
                             self._current_display_league = 'ncaaw'
                         self._current_display_mode_type = mode_type
                         
