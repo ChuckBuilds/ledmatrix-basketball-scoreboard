@@ -28,5 +28,5 @@
   ],
   "dependencies": {},
   "entry_point": "manager.py",
-  "class_name": "BasketballPluginManager"
+  "class_name": "BasketballScoreboardPlugin"
 }
