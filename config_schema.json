@@ -37,6 +37,11 @@
       "type": "object",
       "description": "Transition configuration for this plugin",
       "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable or disable transitions"
+        },
         "type": {
           "type": "string",
           "enum": ["redraw", "fade", "slide", "wipe", "dissolve", "pixelate"],
@@ -49,14 +54,10 @@
           "minimum": 1,
           "maximum": 10,
           "description": "Transition speed (1=slow, 10=fast)"
-        },
-        "enabled": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable or disable transitions"
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "x-propertyOrder": ["enabled", "type", "speed"]
     },
     "game_display_duration": {
       "type": "number",
@@ -990,5 +991,23 @@
     }
   },
   "additionalProperties": false,
-  "required": ["enabled"]
+  "required": ["enabled"],
+  "x-propertyOrder": [
+    "display_duration",
+    "live_priority",
+    "high_performance_transitions",
+    "update_interval",
+    "transition",
+    "game_display_duration",
+    "dynamic_duration",
+    "leagues",
+    "modes",
+    "team_filter",
+    "game_filter",
+    "display_settings",
+    "data_sources",
+    "cache_settings",
+    "api_settings",
+    "debug"
+  ]
 }
