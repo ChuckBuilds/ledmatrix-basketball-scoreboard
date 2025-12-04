@@ -42,6 +42,8 @@ A plugin for LEDMatrix that displays live, recent, and upcoming basketball games
 
 #### NCAA Men's Basketball Configuration
 
+**Note**: Full season data is only fetched for teams in `favorite_teams`. Recent/Upcoming modes require favorite teams to be configured.
+
 ```json
 {
   "ncaam_basketball": {
@@ -59,6 +61,8 @@ A plugin for LEDMatrix that displays live, recent, and upcoming basketball games
 ```
 
 #### NCAA Women's Basketball Configuration
+
+**Note**: Full season data is only fetched for teams in `favorite_teams`. Recent/Upcoming modes require favorite teams to be configured.
 
 ```json
 {
@@ -127,6 +131,18 @@ The plugin uses background data fetching for efficient API calls:
 ## Data Source
 
 Game data is fetched from ESPN's public API endpoints for all supported basketball leagues.
+
+### NCAA Basketball Season Data
+
+**Important**: For NCAA Men's and Women's Basketball, full season data is only fetched for teams in your `favorite_teams` list:
+
+- **Live Mode**: Shows all current/live games (not limited to favorite teams)
+- **Recent/Upcoming Modes**: Only displays games from your favorite teams' full season schedules
+- **No Favorite Teams**: If no favorite teams are configured, Recent/Upcoming modes will only show games from the current scoreboard (limited data)
+
+This approach works around ESPN API limitations that prevent fetching full season schedules via date ranges for college basketball. The plugin uses team-specific schedule endpoints (`/teams/{id}/schedule`) to get complete season data for each favorite team.
+
+**NBA and WNBA**: These leagues support date range queries, so full season data is available regardless of favorite teams configuration.
 
 ## Dependencies
 
