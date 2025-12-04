@@ -596,8 +596,8 @@ class BasketballScoreboardPlugin(BasePlugin if BasePlugin else object):
                         f"NCAA Men's: {self.ncaam_enabled}, NCAA Women's: {self.ncaaw_enabled})"
                     )
                 else:
-                    self.logger.debug(
-                        f"No content available for mode: {display_mode} after trying {len(managers_to_try)} manager(s)"
+                    self.logger.info(
+                        f"No content available for mode: {display_mode} after trying {len(managers_to_try)} manager(s) - returning False"
                     )
                 
                 # Don't clear the display when returning False - let the caller handle skipping
