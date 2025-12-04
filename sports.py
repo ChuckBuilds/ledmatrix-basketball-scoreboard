@@ -383,7 +383,14 @@ class SportsCore(ABC):
         self, team_id: str, team_abbrev: str, logo_path: Path, logo_url: str | None
     ) -> Optional[Image.Image]:
         """Load and resize a team logo, with caching and automatic download if missing."""
-        self.logger.debug(f"Logo path: {logo_path}")
+        # Ensure logo_path is absolute
+        if not logo_path.is_absolute():
+            # Try to resolve relative to current working directory or project root
+            logo_path = Path(logo_path).resolve()
+        
+        self.logger.debug(
+            f"Loading logo for {team_abbrev} (ID: {team_id}): path={logo_path}, url={logo_url}, exists={logo_path.exists()}"
+        )
         if team_abbrev in self._logo_cache:
             self.logger.debug(f"Using cached logo for {team_abbrev}")
             return self._logo_cache[team_abbrev]
