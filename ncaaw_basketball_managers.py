@@ -127,10 +127,13 @@ class BaseNCAAWBasketballManager(Basketball):
         Falls back to current date scoreboard if no favorite teams configured.
         """
         now = datetime.now(pytz.utc)
-        season_year = now.year
         # NCAA season typically runs from November to April
-        if now.month < 11:
-            season_year = now.year - 1
+        # ESPN's season parameter uses the year the season ENDS, not starts
+        # If we're in Nov-Dec, we're in a season that ends next year
+        if now.month >= 11:
+            season_year = now.year + 1  # Season ends next year
+        else:
+            season_year = now.year  # Season ends this year
         
         # If favorite teams are configured, use team schedules
         if self.favorite_teams:
