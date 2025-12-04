@@ -505,7 +505,7 @@ class SportsCore(ABC):
         return False
 
     def _fetch_team_rankings(self) -> Dict[str, int]:
-        """Fetch team rankings using the new architecture components."""
+        """Fetch team rankings/standings using the new architecture components."""
         current_time = time.time()
 
         # Check if we have cached rankings that are still valid
@@ -520,30 +520,56 @@ class SportsCore(ABC):
             data = self.data_source.fetch_standings(self.sport, self.league)
 
             rankings = {}
-            rankings_data = data.get("rankings", [])
+            
+            # Check if this is standings data (professional leagues like NBA, WNBA)
+            # Standings structure: data['children'] -> child['standings']['entries'] -> entry['team']
+            if "children" in data:
+                # This is standings data (NBA, WNBA, etc.)
+                # Extract teams from all conferences/divisions
+                rank = 1
+                for child in data.get("children", []):
+                    standings = child.get("standings", {})
+                    entries = standings.get("entries", [])
+                    
+                    # Sort entries by win percentage or record (standings are already ordered)
+                    for entry in entries:
+                        team_info = entry.get("team", {})
+                        team_abbr = team_info.get("abbreviation", "")
+                        
+                        if team_abbr:
+                            rankings[team_abbr] = rank
+                            rank += 1
+                
+                self.logger.debug(f"Fetched standings for {len(rankings)} teams")
+            
+            # Check if this is rankings data (college sports)
+            # Rankings structure: data['rankings'] -> ranking['ranks'] -> rank['team']
+            elif "rankings" in data:
+                rankings_data = data.get("rankings", [])
+                
+                if rankings_data:
+                    # Use the first ranking (usually AP Top 25)
+                    first_ranking = rankings_data[0]
+                    teams = first_ranking.get("ranks", [])
 
-            if rankings_data:
-                # Use the first ranking (usually AP Top 25)
-                first_ranking = rankings_data[0]
-                teams = first_ranking.get("ranks", [])
+                    for team_data in teams:
+                        team_info = team_data.get("team", {})
+                        team_abbr = team_info.get("abbreviation", "")
+                        current_rank = team_data.get("current", 0)
 
-                for team_data in teams:
-                    team_info = team_data.get("team", {})
-                    team_abbr = team_info.get("abbreviation", "")
-                    current_rank = team_data.get("current", 0)
-
-                    if team_abbr and current_rank > 0:
-                        rankings[team_abbr] = current_rank
+                        if team_abbr and current_rank > 0:
+                            rankings[team_abbr] = current_rank
+                
+                self.logger.debug(f"Fetched rankings for {len(rankings)} teams")
 
             # Cache the results
             self._team_rankings_cache = rankings
             self._rankings_cache_timestamp = current_time
 
-            self.logger.debug(f"Fetched rankings for {len(rankings)} teams")
             return rankings
 
         except Exception as e:
-            self.logger.error(f"Error fetching team rankings: {e}")
+            self.logger.error(f"Error fetching team rankings/standings: {e}")
             return {}
 
     def _extract_game_details_common(
