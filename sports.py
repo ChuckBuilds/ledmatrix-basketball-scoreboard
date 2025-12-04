@@ -14,9 +14,18 @@ from urllib3.util.retry import Retry
 
 # Import simplified dependencies for plugin use
 from dynamic_team_resolver import DynamicTeamResolver
-from logo_downloader import LogoDownloader, download_missing_logo
 from base_odds_manager import BaseOddsManager
 from data_sources import ESPNDataSource
+
+# Import main logo downloader (same as football plugin)
+import sys
+from pathlib import Path
+# Add parent directory to path to import from src
+plugin_dir = Path(__file__).resolve().parent
+project_root = plugin_dir.parent.parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+from src.logo_downloader import LogoDownloader, download_missing_logo
 
 
 class SportsCore(ABC):
@@ -383,18 +392,7 @@ class SportsCore(ABC):
         self, team_id: str, team_abbrev: str, logo_path: Path, logo_url: str | None
     ) -> Optional[Image.Image]:
         """Load and resize a team logo, with caching and automatic download if missing."""
-        # Ensure logo_path is absolute - resolve relative to logo_dir if needed
-        if not logo_path.is_absolute():
-            # If path is relative, resolve it relative to logo_dir
-            if hasattr(self, 'logo_dir') and self.logo_dir:
-                logo_path = (self.logo_dir / logo_path).resolve()
-            else:
-                # Fallback: resolve relative to current working directory
-                logo_path = Path(logo_path).resolve()
-        
-        self.logger.info(
-            f"Loading logo for {team_abbrev} (ID: {team_id}): path={logo_path}, url={logo_url}, exists={logo_path.exists()}, logo_dir={getattr(self, 'logo_dir', 'N/A')}"
-        )
+        self.logger.debug(f"Logo path: {logo_path}")
         if team_abbrev in self._logo_cache:
             self.logger.debug(f"Using cached logo for {team_abbrev}")
             return self._logo_cache[team_abbrev]
@@ -402,46 +400,31 @@ class SportsCore(ABC):
         try:
             # Try different filename variations first (for cases like TA&M vs TAANDM)
             actual_logo_path = None
-            filename_variations = LogoDownloader.get_logo_filename_variations(
-                team_abbrev
-            )
-
+            filename_variations = LogoDownloader.get_logo_filename_variations(team_abbrev)
+            
             for filename in filename_variations:
                 test_path = logo_path.parent / filename
                 if test_path.exists():
                     actual_logo_path = test_path
-                    self.logger.info(
-                        f"Found logo at alternative path: {actual_logo_path}"
-                    )
+                    self.logger.debug(f"Found logo at alternative path: {actual_logo_path}")
                     break
-
+            
             # If no variation found, try to download missing logo
             if not actual_logo_path and not logo_path.exists():
-                self.logger.info(
-                    f"Logo file does not exist: {logo_path}, parent exists: {logo_path.parent.exists()}, parent writable: {os.access(logo_path.parent, os.W_OK) if logo_path.parent.exists() else False}"
-                )
-                self.logger.info(
-                    f"Logo not found for {team_abbrev} (ID: {team_id}) at {logo_path}. Attempting to download."
-                )
-                self.logger.debug(
-                    f"Logo URL from API: {logo_url}, Sport key: {self.sport_key}"
-                )
-
-                # Try to download the logo from ESPN API (this will create placeholder if download fails)
-                download_success = download_missing_logo(
-                    self.sport_key, team_id, team_abbrev, logo_path, logo_url
-                )
+                self.logger.info(f"Logo not found for {team_abbrev} at {logo_path}. Attempting to download.")
                 
-                if download_success:
-                    self.logger.info(
-                        f"Successfully downloaded/created logo for {team_abbrev} at {logo_path}"
-                    )
-                else:
-                    self.logger.warning(
-                        f"Failed to download/create logo for {team_abbrev} (ID: {team_id}). "
-                        f"Logo URL: {logo_url}, Path: {logo_path}"
-                    )
+                # Map sport_key to league identifier expected by main downloader
+                # Main downloader uses different keys than plugin sport_key
+                league_map = {
+                    'nba': 'nba',
+                    'wnba': 'wnba',
+                    'ncaam': 'ncaam_basketball',  # Main downloader uses 'ncaam_basketball'
+                    'ncaaw': 'ncaam_basketball',  # Use same endpoint as men's (no separate endpoint)
+                }
+                league = league_map.get(self.sport_key, self.sport_key)
                 
+                # Use main logo downloader (same as football plugin) - handles path resolution and permissions
+                download_missing_logo(league, team_id, team_abbrev, logo_path, logo_url)
                 actual_logo_path = logo_path
 
             # Use the original path if no alternative was found
@@ -450,26 +433,12 @@ class SportsCore(ABC):
 
             # Only try to open the logo if the file exists
             if os.path.exists(actual_logo_path):
-                try:
-                    logo = Image.open(actual_logo_path)
-                    self.logger.debug(
-                        f"Successfully loaded logo for {team_abbrev} from {actual_logo_path}"
-                    )
-                except Exception as e:
-                    self.logger.error(
-                        f"Failed to open logo file for {team_abbrev} at {actual_logo_path}: {e}"
-                    )
-                    return None
+                logo = Image.open(actual_logo_path)
             else:
-                self.logger.error(
-                    f"Logo file still doesn't exist at {actual_logo_path} after download attempt. "
-                    f"Team: {team_abbrev} (ID: {team_id}), Logo URL: {logo_url}, "
-                    f"Directory exists: {os.path.exists(actual_logo_path.parent)}, "
-                    f"Directory writable: {os.access(actual_logo_path.parent, os.W_OK) if os.path.exists(actual_logo_path.parent) else 'N/A'}"
-                )
+                self.logger.error(f"Logo file still doesn't exist at {actual_logo_path} after download attempt")
                 return None
-            if logo.mode != "RGBA":
-                logo = logo.convert("RGBA")
+            if logo.mode != 'RGBA':
+                logo = logo.convert('RGBA')
 
             max_width = int(self.display_width * 1.5)
             max_height = int(self.display_height * 1.5)
@@ -478,9 +447,7 @@ class SportsCore(ABC):
             return logo
 
         except Exception as e:
-            self.logger.error(
-                f"Error loading logo for {team_abbrev}: {e}", exc_info=True
-            )
+            self.logger.error(f"Error loading logo for {team_abbrev}: {e}", exc_info=True)
             return None
 
     def _fetch_odds(self, game: Dict) -> None:
