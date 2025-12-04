@@ -383,13 +383,17 @@ class SportsCore(ABC):
         self, team_id: str, team_abbrev: str, logo_path: Path, logo_url: str | None
     ) -> Optional[Image.Image]:
         """Load and resize a team logo, with caching and automatic download if missing."""
-        # Ensure logo_path is absolute
+        # Ensure logo_path is absolute - resolve relative to logo_dir if needed
         if not logo_path.is_absolute():
-            # Try to resolve relative to current working directory or project root
-            logo_path = Path(logo_path).resolve()
+            # If path is relative, resolve it relative to logo_dir
+            if hasattr(self, 'logo_dir') and self.logo_dir:
+                logo_path = (self.logo_dir / logo_path).resolve()
+            else:
+                # Fallback: resolve relative to current working directory
+                logo_path = Path(logo_path).resolve()
         
-        self.logger.debug(
-            f"Loading logo for {team_abbrev} (ID: {team_id}): path={logo_path}, url={logo_url}, exists={logo_path.exists()}"
+        self.logger.info(
+            f"Loading logo for {team_abbrev} (ID: {team_id}): path={logo_path}, url={logo_url}, exists={logo_path.exists()}, logo_dir={getattr(self, 'logo_dir', 'N/A')}"
         )
         if team_abbrev in self._logo_cache:
             self.logger.debug(f"Using cached logo for {team_abbrev}")
@@ -406,13 +410,16 @@ class SportsCore(ABC):
                 test_path = logo_path.parent / filename
                 if test_path.exists():
                     actual_logo_path = test_path
-                    self.logger.debug(
+                    self.logger.info(
                         f"Found logo at alternative path: {actual_logo_path}"
                     )
                     break
 
             # If no variation found, try to download missing logo
             if not actual_logo_path and not logo_path.exists():
+                self.logger.info(
+                    f"Logo file does not exist: {logo_path}, parent exists: {logo_path.parent.exists()}, parent writable: {os.access(logo_path.parent, os.W_OK) if logo_path.parent.exists() else False}"
+                )
                 self.logger.info(
                     f"Logo not found for {team_abbrev} (ID: {team_id}) at {logo_path}. Attempting to download."
                 )
