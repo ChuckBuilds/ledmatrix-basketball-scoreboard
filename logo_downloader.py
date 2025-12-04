@@ -101,6 +101,7 @@ def download_missing_logo(sport_key: str, team_id: str, team_abbr: str, logo_pat
         # If we have a logo URL, try to download it
         if logo_url:
             try:
+                logger.debug(f"Attempting to download logo for {team_abbr} from {logo_url}")
                 response = requests.get(logo_url, timeout=30)
                 if response.status_code == 200:
                     # Verify it's an image
@@ -108,14 +109,26 @@ def download_missing_logo(sport_key: str, team_id: str, team_abbr: str, logo_pat
                     if any(img_type in content_type for img_type in ['image/png', 'image/jpeg', 'image/jpg', 'image/gif']):
                         with open(logo_path, 'wb') as f:
                             f.write(response.content)
-                        logger.info(f"Downloaded logo for {team_abbr} from {logo_url}")
+                        logger.info(f"Downloaded logo for {team_abbr} from {logo_url} to {logo_path}")
                         return True
+                    else:
+                        logger.warning(
+                            f"Logo URL for {team_abbr} returned non-image content type: {content_type}. "
+                            f"URL: {logo_url}"
+                        )
+                else:
+                    logger.warning(
+                        f"Logo URL for {team_abbr} returned status {response.status_code}. "
+                        f"URL: {logo_url}"
+                    )
             except PermissionError as e:
                 logger.error(f"Permission denied downloading logo for {team_abbr}: {e}")
                 logger.error(f"Please run: sudo ./scripts/fix_perms/fix_assets_permissions.sh")
                 return False
             except Exception as e:
-                logger.error(f"Failed to download logo for {team_abbr}: {e}")
+                logger.error(f"Failed to download logo for {team_abbr} from {logo_url}: {e}")
+                import traceback
+                logger.debug(f"Download error traceback: {traceback.format_exc()}")
         
         # If no URL or download failed, create a placeholder
         return create_placeholder_logo(team_abbr, logo_path)

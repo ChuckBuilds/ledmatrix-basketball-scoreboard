@@ -407,13 +407,27 @@ class SportsCore(ABC):
             # If no variation found, try to download missing logo
             if not actual_logo_path and not logo_path.exists():
                 self.logger.info(
-                    f"Logo not found for {team_abbrev} at {logo_path}. Attempting to download."
+                    f"Logo not found for {team_abbrev} (ID: {team_id}) at {logo_path}. Attempting to download."
+                )
+                self.logger.debug(
+                    f"Logo URL from API: {logo_url}, Sport key: {self.sport_key}"
                 )
 
                 # Try to download the logo from ESPN API (this will create placeholder if download fails)
-                download_missing_logo(
+                download_success = download_missing_logo(
                     self.sport_key, team_id, team_abbrev, logo_path, logo_url
                 )
+                
+                if download_success:
+                    self.logger.info(
+                        f"Successfully downloaded/created logo for {team_abbrev} at {logo_path}"
+                    )
+                else:
+                    self.logger.warning(
+                        f"Failed to download/create logo for {team_abbrev} (ID: {team_id}). "
+                        f"Logo URL: {logo_url}, Path: {logo_path}"
+                    )
+                
                 actual_logo_path = logo_path
 
             # Use the original path if no alternative was found
@@ -422,10 +436,22 @@ class SportsCore(ABC):
 
             # Only try to open the logo if the file exists
             if os.path.exists(actual_logo_path):
-                logo = Image.open(actual_logo_path)
+                try:
+                    logo = Image.open(actual_logo_path)
+                    self.logger.debug(
+                        f"Successfully loaded logo for {team_abbrev} from {actual_logo_path}"
+                    )
+                except Exception as e:
+                    self.logger.error(
+                        f"Failed to open logo file for {team_abbrev} at {actual_logo_path}: {e}"
+                    )
+                    return None
             else:
                 self.logger.error(
-                    f"Logo file still doesn't exist at {actual_logo_path} after download attempt"
+                    f"Logo file still doesn't exist at {actual_logo_path} after download attempt. "
+                    f"Team: {team_abbrev} (ID: {team_id}), Logo URL: {logo_url}, "
+                    f"Directory exists: {os.path.exists(actual_logo_path.parent)}, "
+                    f"Directory writable: {os.access(actual_logo_path.parent, os.W_OK) if os.path.exists(actual_logo_path.parent) else 'N/A'}"
                 )
                 return None
             if logo.mode != "RGBA":
@@ -1083,9 +1109,19 @@ class SportsUpcoming(SportsCore):
             )
 
             if not home_logo or not away_logo:
+                missing_logos = []
+                if not home_logo:
+                    missing_logos.append(f"home ({game.get('home_abbr', 'N/A')})")
+                if not away_logo:
+                    missing_logos.append(f"away ({game.get('away_abbr', 'N/A')})")
+                
                 self.logger.error(
-                    f"Failed to load logos for game: {game.get('id')}"
-                )  # Changed log prefix
+                    f"Failed to load logos for game {game.get('id')}: {', '.join(missing_logos)}. "
+                    f"Home logo path: {game.get('home_logo_path')}, "
+                    f"Away logo path: {game.get('away_logo_path')}, "
+                    f"Home logo URL: {game.get('home_logo_url')}, "
+                    f"Away logo URL: {game.get('away_logo_url')}"
+                )
                 draw_final = ImageDraw.Draw(main_img.convert("RGB"))
                 self._draw_text_with_outline(
                     draw_final, "Logo Error", (5, 5), self.fonts["status"]
