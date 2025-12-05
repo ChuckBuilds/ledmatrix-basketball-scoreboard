@@ -1,6 +1,7 @@
 from typing import Dict, Any, Optional
 from datetime import datetime, timezone
 import logging
+import re
 from PIL import Image, ImageDraw, ImageFont
 import time
 from sports import SportsCore, SportsLive
@@ -150,10 +151,37 @@ class BasketballLive(Basketball, SportsLive):
             def format_score(score):
                 """Format score as integer string, removing decimals."""
                 try:
+                    # Handle None or empty values
+                    if score is None:
+                        return "0"
+                    
+                    # If it's already a string, try to parse it
                     if isinstance(score, str):
-                        return str(int(float(score)))
+                        # Remove any whitespace
+                        score = score.strip()
+                        # If empty, return 0
+                        if not score:
+                            return "0"
+                        # Try to extract number from string (handles cases where score might be a string representation of something else)
+                        try:
+                            return str(int(float(score)))
+                        except ValueError:
+                            # Try to extract first number from string
+                            numbers = re.findall(r'\d+', score)
+                            if numbers:
+                                return str(int(numbers[0]))
+                            self.logger.warning(f"Could not parse score string: {score}")
+                            return "0"
+                    
+                    # Handle dict (shouldn't happen if extraction worked, but be safe)
+                    if isinstance(score, dict):
+                        score_value = score.get("value", score.get("displayValue", 0))
+                        return str(int(float(score_value)))
+                    
+                    # Handle numeric types
                     return str(int(float(score)))
-                except (ValueError, TypeError):
+                except (ValueError, TypeError) as e:
+                    self.logger.warning(f"Error formatting score: {e}, score type: {type(score)}, score value: {score}")
                     return "0"
             
             home_score = format_score(game.get("home_score", "0"))

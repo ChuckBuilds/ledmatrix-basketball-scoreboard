@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 import time
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta, timezone
@@ -678,20 +679,35 @@ class SportsCore(ABC):
                 score = team_data.get("score")
                 if score is None:
                     return "0"
+                
                 # If score is a dict (e.g., {"value": 75}), extract the value
                 if isinstance(score, dict):
                     score_value = score.get("value", 0)
+                    # Also check for other possible keys
+                    if score_value == 0:
+                        score_value = score.get("displayValue", score.get("score", 0))
                 else:
                     score_value = score
                 
                 # Convert to integer to remove decimal points, then to string
                 try:
-                    # Handle string scores that might have decimals
+                    # Handle string scores - check if it's a string representation of a dict first
                     if isinstance(score_value, str):
-                        score_value = float(score_value)
+                        # Try to parse as float/int first
+                        try:
+                            score_value = float(score_value)
+                        except ValueError:
+                            # If it's not a number, try to extract number from string
+                            numbers = re.findall(r'\d+', score_value)
+                            if numbers:
+                                score_value = float(numbers[0])
+                            else:
+                                self.logger.warning(f"Could not extract score from string: {score_value}")
+                                return "0"
                     # Convert to int to remove decimals, then to string
                     return str(int(float(score_value)))
-                except (ValueError, TypeError):
+                except (ValueError, TypeError) as e:
+                    self.logger.warning(f"Error extracting score: {e}, score type: {type(score)}, score value: {score}")
                     return "0"
             
             home_score = extract_score(home_team)
@@ -1595,10 +1611,38 @@ class SportsRecent(SportsCore):
             def format_score(score):
                 """Format score as integer string, removing decimals."""
                 try:
+                    # Handle None or empty values
+                    if score is None:
+                        return "0"
+                    
+                    # If it's already a string, try to parse it
                     if isinstance(score, str):
-                        return str(int(float(score)))
+                        # Remove any whitespace
+                        score = score.strip()
+                        # If empty, return 0
+                        if not score:
+                            return "0"
+                        # Try to extract number from string (handles cases where score might be a string representation of something else)
+                        try:
+                            return str(int(float(score)))
+                        except ValueError:
+                            # Try to extract first number from string
+                            import re
+                            numbers = re.findall(r'\d+', score)
+                            if numbers:
+                                return str(int(numbers[0]))
+                            self.logger.warning(f"Could not parse score string: {score}")
+                            return "0"
+                    
+                    # Handle dict (shouldn't happen if extraction worked, but be safe)
+                    if isinstance(score, dict):
+                        score_value = score.get("value", score.get("displayValue", 0))
+                        return str(int(float(score_value)))
+                    
+                    # Handle numeric types
                     return str(int(float(score)))
-                except (ValueError, TypeError):
+                except (ValueError, TypeError) as e:
+                    self.logger.warning(f"Error formatting score: {e}, score type: {type(score)}, score value: {score}")
                     return "0"
             
             home_score = format_score(game.get("home_score", "0"))
