@@ -7,6 +7,7 @@ functionality by reusing proven, working manager classes.
 
 import logging
 import time
+import threading
 from typing import Dict, Any, Set, Optional
 
 from PIL import ImageFont
@@ -435,37 +436,72 @@ class BasketballScoreboardPlugin(BasePlugin if BasePlugin else object):
         return None
 
     def update(self) -> None:
-        """Update basketball game data."""
+        """Update basketball game data using parallel manager updates."""
         if not self.is_enabled:
             return
 
-        try:
-            # Update NBA managers if enabled
-            if self.nba_enabled:
-                self.nba_live.update()
-                self.nba_recent.update()
-                self.nba_upcoming.update()
-
-            # Update WNBA managers if enabled
-            if self.wnba_enabled:
-                self.wnba_live.update()
-                self.wnba_recent.update()
-                self.wnba_upcoming.update()
-
-            # Update NCAA Men's managers if enabled
-            if self.ncaam_enabled:
-                self.ncaam_live.update()
-                self.ncaam_recent.update()
-                self.ncaam_upcoming.update()
-
-            # Update NCAA Women's managers if enabled
-            if self.ncaaw_enabled:
-                self.ncaaw_live.update()
-                self.ncaaw_recent.update()
-                self.ncaaw_upcoming.update()
-
-        except Exception as e:
-            self.logger.error(f"Error updating managers: {e}", exc_info=True)
+        # Collect all manager update tasks
+        update_tasks = []
+        
+        if self.nba_enabled:
+            update_tasks.extend([
+                ("NBA Live", self.nba_live.update),
+                ("NBA Recent", self.nba_recent.update),
+                ("NBA Upcoming", self.nba_upcoming.update),
+            ])
+        
+        if self.wnba_enabled:
+            update_tasks.extend([
+                ("WNBA Live", self.wnba_live.update),
+                ("WNBA Recent", self.wnba_recent.update),
+                ("WNBA Upcoming", self.wnba_upcoming.update),
+            ])
+        
+        if self.ncaam_enabled:
+            update_tasks.extend([
+                ("NCAA Men's Live", self.ncaam_live.update),
+                ("NCAA Men's Recent", self.ncaam_recent.update),
+                ("NCAA Men's Upcoming", self.ncaam_upcoming.update),
+            ])
+        
+        if self.ncaaw_enabled:
+            update_tasks.extend([
+                ("NCAA Women's Live", self.ncaaw_live.update),
+                ("NCAA Women's Recent", self.ncaaw_recent.update),
+                ("NCAA Women's Upcoming", self.ncaaw_upcoming.update),
+            ])
+        
+        if not update_tasks:
+            return
+        
+        # Run updates in parallel with individual error handling
+        def run_update_with_error_handling(name: str, update_func):
+            """Run a single manager update with error handling."""
+            try:
+                update_func()
+            except Exception as e:
+                self.logger.error(f"Error updating {name} manager: {e}", exc_info=True)
+        
+        # Start all update threads
+        threads = []
+        for name, update_func in update_tasks:
+            thread = threading.Thread(
+                target=run_update_with_error_handling,
+                args=(name, update_func),
+                daemon=True,
+                name=f"Update-{name}"
+            )
+            thread.start()
+            threads.append(thread)
+        
+        # Wait for all threads to complete with a reasonable timeout
+        # Use 25 seconds to stay under the 30-second plugin timeout
+        for thread in threads:
+            thread.join(timeout=25.0)
+            if thread.is_alive():
+                self.logger.warning(
+                    f"Manager update thread {thread.name} did not complete within timeout"
+                )
 
     def display(self, display_mode: str = None, force_clear: bool = False) -> bool:
         """Display basketball games with mode cycling.
