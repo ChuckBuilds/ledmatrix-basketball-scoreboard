@@ -741,6 +741,19 @@ class SportsCore(ABC):
             home_score = extract_score(home_team)
             away_score = extract_score(away_team)
 
+            # Extract logo URLs from ESPN API structure (logos is an array)
+            def extract_logo_url(team_data):
+                """Extract logo URL from team data."""
+                team_info = team_data.get("team", {})
+                logos = team_info.get("logos", [])
+                if logos and len(logos) > 0:
+                    return logos[0].get("href")
+                # Fallback to direct logo field if logos array doesn't exist
+                return team_info.get("logo")
+            
+            home_logo_url = extract_logo_url(home_team)
+            away_logo_url = extract_logo_url(away_team)
+            
             details = {
                 "id": game_event.get("id"),
                 "game_time": game_time,
@@ -765,7 +778,7 @@ class SportsCore(ABC):
                 "home_score": home_score,
                 "home_logo_path": self.logo_dir
                 / Path(f"{LogoDownloader.normalize_abbreviation(home_abbr)}.png"),
-                "home_logo_url": home_team["team"].get("logo"),
+                "home_logo_url": home_logo_url,
                 "home_record": home_record,
                 "away_record": away_record,
                 "away_abbr": away_abbr,
@@ -773,7 +786,7 @@ class SportsCore(ABC):
                 "away_score": away_score,
                 "away_logo_path": self.logo_dir
                 / Path(f"{LogoDownloader.normalize_abbreviation(away_abbr)}.png"),
-                "away_logo_url": away_team["team"].get("logo"),
+                "away_logo_url": away_logo_url,
                 "is_within_window": True,  # Whether game is within display window
             }
             return details, home_team, away_team, status, situation
