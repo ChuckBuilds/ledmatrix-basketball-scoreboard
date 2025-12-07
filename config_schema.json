@@ -21,43 +21,12 @@
       "default": false,
       "description": "Enable live priority takeover when plugin has live content"
     },
-    "high_performance_transitions": {
-      "type": "boolean",
-      "default": false,
-      "description": "Use high-performance transitions (120 FPS) instead of standard (30 FPS)"
-    },
     "update_interval": {
       "type": "integer",
       "default": 3600,
       "minimum": 30,
       "maximum": 86400,
       "description": "How often to fetch new data in seconds"
-    },
-    "transition": {
-      "type": "object",
-      "description": "Transition configuration for this plugin",
-      "properties": {
-        "enabled": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable or disable transitions"
-        },
-        "type": {
-          "type": "string",
-          "enum": ["redraw", "fade", "slide", "wipe", "dissolve", "pixelate"],
-          "default": "redraw",
-          "description": "Type of transition to use"
-        },
-        "speed": {
-          "type": "integer",
-          "default": 2,
-          "minimum": 1,
-          "maximum": 10,
-          "description": "Transition speed (1=slow, 10=fast)"
-        }
-      },
-      "additionalProperties": false,
-      "x-propertyOrder": ["enabled", "type", "speed"]
     },
     "game_display_duration": {
       "type": "number",
@@ -995,9 +964,7 @@
   "x-propertyOrder": [
     "display_duration",
     "live_priority",
-    "high_performance_transitions",
     "update_interval",
-    "transition",
     "game_display_duration",
     "dynamic_duration",
     "leagues",
