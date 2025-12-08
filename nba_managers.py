@@ -173,32 +173,7 @@ class NBALiveManager(BaseNBAManager, BasketballLive):
     def __init__(self, config: Dict[str, Any], display_manager, cache_manager):
         super().__init__(config, display_manager, cache_manager)
         self.logger = logging.getLogger("NBALiveManager")
-
-        if self.test_mode:
-            # Test game for NBA
-            self.current_game = {
-                "id": "test001",
-                "home_abbr": "LAL",
-                "home_id": "123",
-                "away_abbr": "BOS",
-                "away_id": "456",
-                "home_score": "98",
-                "away_score": "95",
-                "period": 4,
-                "period_text": "Q4",
-                "clock": "02:35",
-                "home_logo_path": Path(self.logo_dir, "LAL.png"),
-                "away_logo_path": Path(self.logo_dir, "BOS.png"),
-                "is_live": True,
-                "is_final": False,
-                "is_upcoming": False,
-                "is_halftime": False,
-                "status_text": "Q4 02:35",
-            }
-            self.live_games = [self.current_game]
-            self.logger.info("Initialized NBALiveManager with test game: BOS vs LAL")
-        else:
-            self.logger.info("Initialized NBALiveManager in live mode")
+        self.logger.info("Initialized NBALiveManager in live mode")
 
 
 class NBARecentManager(BaseNBAManager, SportsRecent):

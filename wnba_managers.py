@@ -162,7 +162,8 @@ class WNBALiveManager(BaseWNBAManager, BasketballLive):
         super().__init__(config, display_manager, cache_manager)
         self.logger = logging.getLogger("WNBALiveManager")
 
-        if self.test_mode:
+        # Test mode removed - always use live data
+        if False:
             self.current_game = {
                 "id": "test001",
                 "home_abbr": "LAS",

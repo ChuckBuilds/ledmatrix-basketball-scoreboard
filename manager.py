@@ -259,17 +259,6 @@ class BasketballScoreboardPlugin(BasePlugin if BasePlugin else object):
             f"final show_all_live={show_all_live}"
         )
 
-        # Logo directory mapping
-        LOGO_DIRECTORIES = {
-            'nba': 'assets/sports/nba_logos',
-            'wnba': 'assets/sports/wnba_logos',
-            'ncaam': 'assets/sports/ncaa_logos',
-            'ncaaw': 'assets/sports/ncaa_logos',
-        }
-        
-        # Get logo directory from config or use mapping
-        default_logo_dir = LOGO_DIRECTORIES.get(league, f"assets/sports/{league}_logos")
-
         # Create manager config with expected structure
         manager_config = {
             f"{league}_scoreboard": {
@@ -278,11 +267,9 @@ class BasketballScoreboardPlugin(BasePlugin if BasePlugin else object):
                 "display_modes": manager_display_modes,
                 "recent_games_to_show": game_limits.get("recent_games_to_show", 5),
                 "upcoming_games_to_show": game_limits.get("upcoming_games_to_show", 10),
-                "logo_dir": league_config.get("logo_dir", default_logo_dir),
                 "show_records": display_options.get("show_records", False),
                 "show_ranking": display_options.get("show_ranking", False),
                 "show_odds": display_options.get("show_odds", False),
-                "test_mode": league_config.get("test_mode", False),
                 "update_interval_seconds": league_config.get(
                     "update_interval_seconds", 300
                 ),
@@ -932,14 +919,14 @@ class BasketballScoreboardPlugin(BasePlugin if BasePlugin else object):
     def supports_dynamic_duration(self) -> bool:
         """
         Check if dynamic duration is enabled for the current display context.
-        Checks granular settings: per-league/per-mode > per-mode > per-league > global.
+        Checks granular settings: per-league/per-mode > per-league.
         """
         if not self.is_enabled:
             return False
         
-        # If no current display context, check global setting
+        # If no current display context, return False (no global fallback)
         if not self._current_display_league or not self._current_display_mode_type:
-            return super().supports_dynamic_duration()
+            return False
         
         league = self._current_display_league
         mode_type = self._current_display_mode_type
@@ -956,15 +943,8 @@ class BasketballScoreboardPlugin(BasePlugin if BasePlugin else object):
         if "enabled" in league_dynamic:
             return bool(league_dynamic.get("enabled", False))
         
-        # Check global per-mode setting
-        global_dynamic = self.config.get("dynamic_duration", {})
-        global_modes = global_dynamic.get("modes", {})
-        global_mode_config = global_modes.get(mode_type, {})
-        if "enabled" in global_mode_config:
-            return bool(global_mode_config.get("enabled", False))
-        
-        # Fall back to global setting
-        return super().supports_dynamic_duration()
+        # No global fallback - return False
+        return False
     
     def get_dynamic_duration_cap(self) -> Optional[float]:
         """
@@ -1003,20 +983,8 @@ class BasketballScoreboardPlugin(BasePlugin if BasePlugin else object):
             except (TypeError, ValueError):
                 pass
         
-        # Check global per-mode setting
-        global_dynamic = self.config.get("dynamic_duration", {})
-        global_modes = global_dynamic.get("modes", {})
-        global_mode_config = global_modes.get(mode_type, {})
-        if "max_duration_seconds" in global_mode_config:
-            try:
-                cap = float(global_mode_config.get("max_duration_seconds"))
-                if cap > 0:
-                    return cap
-            except (TypeError, ValueError):
-                pass
-        
-        # Fall back to global setting
-        return super().get_dynamic_duration_cap()
+        # No global fallback - return None
+        return None
 
     def _get_manager_for_mode(self, mode_name: str):
         """Resolve manager instance for a given display mode."""

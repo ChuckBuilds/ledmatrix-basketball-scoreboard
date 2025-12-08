@@ -65,7 +65,8 @@ class BasketballLive(Basketball, SportsLive):
     def __init__(self, config: Dict[str, Any], display_manager, cache_manager, logger: logging.Logger, sport_key: str):
         super().__init__(config, display_manager, cache_manager, logger, sport_key)
 
-    def _test_mode_update(self):
+    # Test mode removed
+    def _test_mode_update_removed(self):
         if self.current_game and self.current_game["is_live"]:
             try:
                 minutes, seconds = map(int, self.current_game["clock"].split(':'))

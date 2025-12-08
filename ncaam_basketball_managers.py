@@ -225,7 +225,8 @@ class NCAAMBasketballLiveManager(BaseNCAAMBasketballManager, BasketballLive):
         super().__init__(config, display_manager, cache_manager)
         self.logger = logging.getLogger("NCAAMBasketballLiveManager")
 
-        if self.test_mode:
+        # Test mode removed - always use live data
+        if False:
             self.current_game = {
                 "id": "test001",
                 "home_abbr": "DUKE",
