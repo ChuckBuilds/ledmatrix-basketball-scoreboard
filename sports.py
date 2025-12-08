@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import re
@@ -708,12 +709,16 @@ class SportsCore(ABC):
                 if score is None:
                     return "0"
                 
+                # Debug logging to capture raw score value and type
+                self.logger.debug(f"Raw score value: {score}, type: {type(score)}")
+                
                 # If score is a dict (e.g., {"value": 75}), extract the value
                 if isinstance(score, dict):
                     score_value = score.get("value", 0)
                     # Also check for other possible keys
                     if score_value == 0:
                         score_value = score.get("displayValue", score.get("score", 0))
+                    self.logger.debug(f"Extracted from dict: {score_value}, type: {type(score_value)}")
                 else:
                     score_value = score
                 
@@ -721,19 +726,51 @@ class SportsCore(ABC):
                 try:
                     # Handle string scores - check if it's a string representation of a dict first
                     if isinstance(score_value, str):
-                        # Try to parse as float/int first
-                        try:
-                            score_value = float(score_value)
-                        except ValueError:
-                            # If it's not a number, try to extract number from string
-                            numbers = re.findall(r'\d+', score_value)
-                            if numbers:
-                                score_value = float(numbers[0])
-                            else:
-                                self.logger.warning(f"Could not extract score from string: {score_value}")
-                                return "0"
+                        # Remove any whitespace
+                        score_value = score_value.strip()
+                        self.logger.debug(f"Processing string score: '{score_value}'")
+                        
+                        # Check if it's a JSON string (starts with { or [)
+                        if score_value.startswith(('{', '[')):
+                            try:
+                                # Try to parse as JSON
+                                parsed = json.loads(score_value)
+                                self.logger.debug(f"Parsed JSON string: {parsed}, type: {type(parsed)}")
+                                if isinstance(parsed, dict):
+                                    score_value = parsed.get("value", parsed.get("displayValue", parsed.get("score", 0)))
+                                elif isinstance(parsed, list) and len(parsed) > 0:
+                                    score_value = parsed[0]
+                                else:
+                                    score_value = parsed
+                                self.logger.debug(f"Extracted from parsed JSON: {score_value}")
+                            except (json.JSONDecodeError, ValueError) as json_err:
+                                # If JSON parsing fails, try to extract number from string
+                                self.logger.debug(f"JSON parsing failed: {json_err}, trying regex extraction")
+                                numbers = re.findall(r'\d+', score_value)
+                                if numbers:
+                                    score_value = float(numbers[0])
+                                    self.logger.debug(f"Extracted number via regex: {score_value}")
+                                else:
+                                    self.logger.warning(f"Could not extract score from JSON-like string: {score_value}")
+                                    return "0"
+                        else:
+                            # Try to parse as float/int first
+                            try:
+                                score_value = float(score_value)
+                                self.logger.debug(f"Parsed as float: {score_value}")
+                            except ValueError:
+                                # If it's not a number, try to extract number from string
+                                numbers = re.findall(r'\d+', score_value)
+                                if numbers:
+                                    score_value = float(numbers[0])
+                                    self.logger.debug(f"Extracted number via regex: {score_value}")
+                                else:
+                                    self.logger.warning(f"Could not extract score from string: {score_value}")
+                                    return "0"
                     # Convert to int to remove decimals, then to string
-                    return str(int(float(score_value)))
+                    result = str(int(float(score_value)))
+                    self.logger.debug(f"Final extracted score: {result}")
+                    return result
                 except (ValueError, TypeError) as e:
                     self.logger.warning(f"Error extracting score: {e}, score type: {type(score)}, score value: {score}")
                     return "0"
@@ -1663,12 +1700,32 @@ class SportsRecent(SportsCore):
                         # If empty, return 0
                         if not score:
                             return "0"
+                        
+                        # Check if it's a JSON string (starts with { or [)
+                        if score.startswith(('{', '[')):
+                            try:
+                                # Try to parse as JSON
+                                parsed = json.loads(score)
+                                if isinstance(parsed, dict):
+                                    score_value = parsed.get("value", parsed.get("displayValue", parsed.get("score", 0)))
+                                elif isinstance(parsed, list) and len(parsed) > 0:
+                                    score_value = parsed[0]
+                                else:
+                                    score_value = parsed
+                                return str(int(float(score_value)))
+                            except (json.JSONDecodeError, ValueError):
+                                # If JSON parsing fails, try to extract number from string
+                                numbers = re.findall(r'\d+', score)
+                                if numbers:
+                                    return str(int(numbers[0]))
+                                self.logger.warning(f"Could not parse JSON score string: {score}")
+                                return "0"
+                        
                         # Try to extract number from string (handles cases where score might be a string representation of something else)
                         try:
                             return str(int(float(score)))
                         except ValueError:
                             # Try to extract first number from string
-                            import re
                             numbers = re.findall(r'\d+', score)
                             if numbers:
                                 return str(int(numbers[0]))

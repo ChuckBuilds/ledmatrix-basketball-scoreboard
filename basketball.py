@@ -162,6 +162,28 @@ class BasketballLive(Basketball, SportsLive):
                         # If empty, return 0
                         if not score:
                             return "0"
+                        
+                        # Check if it's a JSON string (starts with { or [)
+                        if score.startswith(('{', '[')):
+                            try:
+                                import json
+                                # Try to parse as JSON
+                                parsed = json.loads(score)
+                                if isinstance(parsed, dict):
+                                    score_value = parsed.get("value", parsed.get("displayValue", parsed.get("score", 0)))
+                                elif isinstance(parsed, list) and len(parsed) > 0:
+                                    score_value = parsed[0]
+                                else:
+                                    score_value = parsed
+                                return str(int(float(score_value)))
+                            except (json.JSONDecodeError, ValueError):
+                                # If JSON parsing fails, try to extract number from string
+                                numbers = re.findall(r'\d+', score)
+                                if numbers:
+                                    return str(int(numbers[0]))
+                                self.logger.warning(f"Could not parse JSON score string: {score}")
+                                return "0"
+                        
                         # Try to extract number from string (handles cases where score might be a string representation of something else)
                         try:
                             return str(int(float(score)))
