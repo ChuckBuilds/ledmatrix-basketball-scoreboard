@@ -457,13 +457,14 @@ class SportsCore(ABC):
 
             # Determine update interval based on game state
             is_live = game.get("is_live", False)
+            is_upcoming = game.get("is_upcoming", False)
             update_interval = (
                 self.mode_config.get("live_odds_update_interval", 60)
                 if is_live
                 else self.mode_config.get("odds_update_interval", 3600)
             )
 
-            # For upcoming games, use async fetch with short timeout to avoid blocking
+            # For upcoming games, use truly fire-and-forget async fetch to avoid blocking
             # For live games, we want odds more urgently, but still use async to prevent blocking
             import threading
             import queue
@@ -487,25 +488,47 @@ class SportsCore(ABC):
             odds_thread.daemon = True
             odds_thread.start()
             
-            # Wait for result with timeout (shorter for upcoming games)
-            timeout = 2.0 if is_live else 1.5  # Live games get slightly longer timeout
-            try:
-                result_type, result_data = result_queue.get(timeout=timeout)
-                if result_type == 'success':
-                    odds_data = result_data
-                    if odds_data:
-                        game["odds"] = odds_data
-                        self.logger.debug(
-                            f"Successfully fetched and attached odds for game {game['id']}"
-                        )
+            # For upcoming games, use fire-and-forget (don't wait at all)
+            # This prevents timeout when processing many upcoming games
+            if is_upcoming:
+                # Fire-and-forget: odds will be fetched in background and cached
+                # They'll be available on next update or when displaying
+                def attach_odds_when_ready():
+                    try:
+                        result_type, result_data = result_queue.get(timeout=5.0)
+                        if result_type == 'success' and result_data:
+                            game["odds"] = result_data
+                            self.logger.debug(
+                                f"Successfully fetched and attached odds for upcoming game {game['id']}"
+                            )
+                    except queue.Empty:
+                        # Timeout - odds will be fetched on next update if needed
+                        pass
+                
+                # Attach odds in background without blocking
+                attach_thread = threading.Thread(target=attach_odds_when_ready)
+                attach_thread.daemon = True
+                attach_thread.start()
+            else:
+                # For live games, wait with timeout (but shorter than before)
+                timeout = 2.0 if is_live else 1.5
+                try:
+                    result_type, result_data = result_queue.get(timeout=timeout)
+                    if result_type == 'success':
+                        odds_data = result_data
+                        if odds_data:
+                            game["odds"] = odds_data
+                            self.logger.debug(
+                                f"Successfully fetched and attached odds for game {game['id']}"
+                            )
+                        else:
+                            self.logger.debug(f"No odds data returned for game {game['id']}")
                     else:
-                        self.logger.debug(f"No odds data returned for game {game['id']}")
-                else:
-                    self.logger.debug(f"Odds fetch failed for game {game['id']}: {result_data}")
-            except queue.Empty:
-                # Timeout - odds will be fetched on next update if needed
-                # This prevents blocking the entire update() method
-                self.logger.debug(f"Odds fetch timed out for game {game['id']} (non-blocking)")
+                        self.logger.debug(f"Odds fetch failed for game {game['id']}: {result_data}")
+                except queue.Empty:
+                    # Timeout - odds will be fetched on next update if needed
+                    # This prevents blocking the entire update() method
+                    self.logger.debug(f"Odds fetch timed out for game {game['id']} (non-blocking)")
 
         except Exception as e:
             self.logger.error(
