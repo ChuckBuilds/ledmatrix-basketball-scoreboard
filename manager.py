@@ -529,40 +529,67 @@ class BasketballScoreboardPlugin(BasePlugin if BasePlugin else object):
                 )
                 
                 # Determine which manager to use based on enabled leagues
-                # Try leagues in priority order: NBA > WNBA > NCAA Men's > NCAA Women's
+                # For live mode, prioritize leagues with live content and live_priority enabled
                 managers_to_try = []
                 
-                if self.nba_enabled:
-                    if mode_type == 'live' and hasattr(self, 'nba_live'):
+                if mode_type == 'live':
+                    # Check NBA first (highest priority)
+                    if (self.nba_enabled and self.nba_live_priority and 
+                        hasattr(self, 'nba_live') and 
+                        bool(getattr(self.nba_live, 'live_games', []))):
                         managers_to_try.append(self.nba_live)
-                    elif mode_type == 'recent' and hasattr(self, 'nba_recent'):
-                        managers_to_try.append(self.nba_recent)
-                    elif mode_type == 'upcoming' and hasattr(self, 'nba_upcoming'):
-                        managers_to_try.append(self.nba_upcoming)
-                
-                if self.wnba_enabled:
-                    if mode_type == 'live' and hasattr(self, 'wnba_live'):
+                    # Check WNBA
+                    if (self.wnba_enabled and self.wnba_live_priority and 
+                        hasattr(self, 'wnba_live') and 
+                        bool(getattr(self.wnba_live, 'live_games', []))):
                         managers_to_try.append(self.wnba_live)
-                    elif mode_type == 'recent' and hasattr(self, 'wnba_recent'):
-                        managers_to_try.append(self.wnba_recent)
-                    elif mode_type == 'upcoming' and hasattr(self, 'wnba_upcoming'):
-                        managers_to_try.append(self.wnba_upcoming)
-                
-                if self.ncaam_enabled:
-                    if mode_type == 'live' and hasattr(self, 'ncaam_live'):
+                    # Check NCAA Men's
+                    if (self.ncaam_enabled and self.ncaam_live_priority and 
+                        hasattr(self, 'ncaam_live') and 
+                        bool(getattr(self.ncaam_live, 'live_games', []))):
                         managers_to_try.append(self.ncaam_live)
-                    elif mode_type == 'recent' and hasattr(self, 'ncaam_recent'):
-                        managers_to_try.append(self.ncaam_recent)
-                    elif mode_type == 'upcoming' and hasattr(self, 'ncaam_upcoming'):
-                        managers_to_try.append(self.ncaam_upcoming)
-                
-                if self.ncaaw_enabled:
-                    if mode_type == 'live' and hasattr(self, 'ncaaw_live'):
+                    # Check NCAA Women's
+                    if (self.ncaaw_enabled and self.ncaaw_live_priority and 
+                        hasattr(self, 'ncaaw_live') and 
+                        bool(getattr(self.ncaaw_live, 'live_games', []))):
                         managers_to_try.append(self.ncaaw_live)
-                    elif mode_type == 'recent' and hasattr(self, 'ncaaw_recent'):
-                        managers_to_try.append(self.ncaaw_recent)
-                    elif mode_type == 'upcoming' and hasattr(self, 'ncaaw_upcoming'):
-                        managers_to_try.append(self.ncaaw_upcoming)
+                    
+                    # Fallback: if no live content, show any enabled live manager
+                    if not managers_to_try:
+                        if self.nba_enabled and hasattr(self, 'nba_live'):
+                            managers_to_try.append(self.nba_live)
+                        elif self.wnba_enabled and hasattr(self, 'wnba_live'):
+                            managers_to_try.append(self.wnba_live)
+                        elif self.ncaam_enabled and hasattr(self, 'ncaam_live'):
+                            managers_to_try.append(self.ncaam_live)
+                        elif self.ncaaw_enabled and hasattr(self, 'ncaaw_live'):
+                            managers_to_try.append(self.ncaaw_live)
+                else:
+                    # For recent and upcoming modes, use standard priority order
+                    # NBA > WNBA > NCAA Men's > NCAA Women's
+                    if self.nba_enabled:
+                        if mode_type == 'recent' and hasattr(self, 'nba_recent'):
+                            managers_to_try.append(self.nba_recent)
+                        elif mode_type == 'upcoming' and hasattr(self, 'nba_upcoming'):
+                            managers_to_try.append(self.nba_upcoming)
+                    
+                    if self.wnba_enabled:
+                        if mode_type == 'recent' and hasattr(self, 'wnba_recent'):
+                            managers_to_try.append(self.wnba_recent)
+                        elif mode_type == 'upcoming' and hasattr(self, 'wnba_upcoming'):
+                            managers_to_try.append(self.wnba_upcoming)
+                    
+                    if self.ncaam_enabled:
+                        if mode_type == 'recent' and hasattr(self, 'ncaam_recent'):
+                            managers_to_try.append(self.ncaam_recent)
+                        elif mode_type == 'upcoming' and hasattr(self, 'ncaam_upcoming'):
+                            managers_to_try.append(self.ncaam_upcoming)
+                    
+                    if self.ncaaw_enabled:
+                        if mode_type == 'recent' and hasattr(self, 'ncaaw_recent'):
+                            managers_to_try.append(self.ncaaw_recent)
+                        elif mode_type == 'upcoming' and hasattr(self, 'ncaaw_upcoming'):
+                            managers_to_try.append(self.ncaaw_upcoming)
                 
                 # Try each manager until one returns True (has content)
                 # Don't clear at the start - let the first successful manager clear when it displays
@@ -794,27 +821,24 @@ class BasketballScoreboardPlugin(BasePlugin if BasePlugin else object):
         return nba_live or wnba_live or ncaam_live or ncaaw_live
 
     def get_live_modes(self) -> list:
+        """
+        Return the registered plugin mode name(s) that have live content.
+        
+        This should return the mode names as registered in manifest.json, not internal
+        mode names. The plugin is registered with "basketball_live", "basketball_recent", "basketball_upcoming".
+        """
         if not self.is_enabled:
             return []
 
-        prioritized_modes = []
-        if self.nba_enabled and self.nba_live_priority and "nba_live" in self.modes:
-            prioritized_modes.append("nba_live")
-
-        if self.wnba_enabled and self.wnba_live_priority and "wnba_live" in self.modes:
-            prioritized_modes.append("wnba_live")
-
-        if self.ncaam_enabled and self.ncaam_live_priority and "ncaam_live" in self.modes:
-            prioritized_modes.append("ncaam_live")
-
-        if self.ncaaw_enabled and self.ncaaw_live_priority and "ncaaw_live" in self.modes:
-            prioritized_modes.append("ncaaw_live")
-
-        if prioritized_modes:
-            return prioritized_modes
-
-        # Fallback: no prioritized league enabled; expose any live modes available
-        return [mode for mode in self.modes if mode.endswith("_live")]
+        # Check if any league has live content
+        has_any_live = self.has_live_content()
+        
+        if has_any_live:
+            # Return the registered plugin mode name, not internal mode names
+            # The plugin is registered with "basketball_live" in manifest.json
+            return ["basketball_live"]
+        
+        return []
 
     def get_info(self) -> Dict[str, Any]:
         """Get plugin information."""
