@@ -159,7 +159,7 @@
         "dynamic_duration": {
           "type": "object",
           "title": "NBA Dynamic Duration Settings",
-            "description": "Configure dynamic duration settings for NBA games.",
+          "description": "Configure dynamic duration settings for NBA games.",
           "properties": {
             "enabled": {
               "type": "boolean",
@@ -833,8 +833,7 @@
           }
         }
       }
-    }
-  },
+    },
   "customization": {
     "type": "object",
     "title": "Display Customization",
@@ -1029,22 +1028,19 @@
     },
     "x-propertyOrder": ["score_text", "period_text", "team_name", "status_text", "detail_text", "rank_text"],
     "additionalProperties": false
+  }
   },
   "additionalProperties": false,
   "required": ["enabled"],
   "x-propertyOrder": [
+    "enabled",
     "display_duration",
     "update_interval",
     "game_display_duration",
-    "leagues",
-    "modes",
-    "team_filter",
-    "game_filter",
-    "display_settings",
-    "data_sources",
-    "cache_settings",
-    "api_settings",
-    "debug",
+    "nba",
+    "wnba",
+    "ncaam",
+    "ncaaw",
     "customization"
   ]
 }
