@@ -2192,19 +2192,29 @@ class SportsLive(SportsCore):
                             
                             if details["is_live"] or details["is_halftime"]:
                                 live_or_halftime_count += 1
-                                # If show_favorite_teams_only is true, only add if it's a favorite.
-                                # Otherwise, add all games.
-                                should_include = (
-                                    self.show_all_live
-                                    or not self.show_favorite_teams_only
-                                    or (
-                                        self.show_favorite_teams_only
-                                        and (
-                                            details["home_abbr"] in self.favorite_teams
-                                            or details["away_abbr"] in self.favorite_teams
-                                        )
+                                
+                                # Filtering logic matching SportsUpcoming:
+                                # - If show_all_live = True → show all games
+                                # - If show_favorite_teams_only = False → show all games
+                                # - If show_favorite_teams_only = True but favorite_teams is empty → show all games (fallback)
+                                # - If show_favorite_teams_only = True and favorite_teams has teams → only show games with those teams
+                                if self.show_all_live:
+                                    # Always show all live games if show_all_live is enabled
+                                    should_include = True
+                                elif not self.show_favorite_teams_only:
+                                    # If favorite teams filtering is disabled, show all games
+                                    should_include = True
+                                elif not self.favorite_teams:
+                                    # If favorite teams filtering is enabled but no favorites are configured,
+                                    # show all games (same behavior as SportsUpcoming)
+                                    should_include = True
+                                else:
+                                    # Favorite teams filtering is enabled AND favorites are configured
+                                    # Only show games involving favorite teams
+                                    should_include = (
+                                        details["home_abbr"] in self.favorite_teams
+                                        or details["away_abbr"] in self.favorite_teams
                                     )
-                                )
                                 
                                 if not should_include:
                                     filtered_out_count += 1
@@ -2220,11 +2230,14 @@ class SportsLive(SportsCore):
                                         self._fetch_odds(details)
                                     new_live_games.append(details)
                     
-                    self.logger.debug(
+                    self.logger.info(
                         f"Live game filtering: {total_events} total events, "
                         f"{live_or_halftime_count} live/halftime, "
                         f"{filtered_out_count} filtered out, "
-                        f"{len(new_live_games)} included"
+                        f"{len(new_live_games)} included | "
+                        f"show_all_live={self.show_all_live}, "
+                        f"show_favorite_teams_only={self.show_favorite_teams_only}, "
+                        f"favorite_teams={self.favorite_teams if self.favorite_teams else '[] (showing all)'}"
                     )
                     # Log changes or periodically
                     current_time_for_log = (
