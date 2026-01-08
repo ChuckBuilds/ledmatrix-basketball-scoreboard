@@ -156,6 +156,40 @@
             }
           }
         },
+        "display_durations": {
+          "type": "object",
+          "description": "How long to display games on screen (in seconds)",
+          "properties": {
+            "base": {
+              "type": "number",
+              "default": 15,
+              "minimum": 5,
+              "maximum": 60,
+              "description": "Base display duration for NBA games"
+            },
+            "live": {
+              "type": "number",
+              "default": 20,
+              "minimum": 5,
+              "maximum": 120,
+              "description": "Display duration for live NBA games"
+            },
+            "recent": {
+              "type": "number",
+              "default": 15,
+              "minimum": 5,
+              "maximum": 60,
+              "description": "Display duration for recent NBA games"
+            },
+            "upcoming": {
+              "type": "number",
+              "default": 15,
+              "minimum": 5,
+              "maximum": 60,
+              "description": "Display duration for upcoming NBA games"
+            }
+          }
+        },
         "dynamic_duration": {
           "type": "object",
           "title": "NBA Dynamic Duration Settings",
@@ -354,6 +388,40 @@
               "type": "boolean",
               "default": false,
               "description": "Show all live games, not just favorites"
+            }
+          }
+        },
+        "display_durations": {
+          "type": "object",
+          "description": "How long to display games on screen (in seconds)",
+          "properties": {
+            "base": {
+              "type": "number",
+              "default": 15,
+              "minimum": 5,
+              "maximum": 60,
+              "description": "Base display duration for WNBA games"
+            },
+            "live": {
+              "type": "number",
+              "default": 20,
+              "minimum": 5,
+              "maximum": 120,
+              "description": "Display duration for live WNBA games"
+            },
+            "recent": {
+              "type": "number",
+              "default": 15,
+              "minimum": 5,
+              "maximum": 60,
+              "description": "Display duration for recent WNBA games"
+            },
+            "upcoming": {
+              "type": "number",
+              "default": 15,
+              "minimum": 5,
+              "maximum": 60,
+              "description": "Display duration for upcoming WNBA games"
             }
           }
         },
@@ -558,6 +626,40 @@
             }
           }
         },
+        "display_durations": {
+          "type": "object",
+          "description": "How long to display games on screen (in seconds)",
+          "properties": {
+            "base": {
+              "type": "number",
+              "default": 15,
+              "minimum": 5,
+              "maximum": 60,
+              "description": "Base display duration for NCAA Men's Basketball games"
+            },
+            "live": {
+              "type": "number",
+              "default": 20,
+              "minimum": 5,
+              "maximum": 120,
+              "description": "Display duration for live NCAA Men's Basketball games"
+            },
+            "recent": {
+              "type": "number",
+              "default": 15,
+              "minimum": 5,
+              "maximum": 60,
+              "description": "Display duration for recent NCAA Men's Basketball games"
+            },
+            "upcoming": {
+              "type": "number",
+              "default": 15,
+              "minimum": 5,
+              "maximum": 60,
+              "description": "Display duration for upcoming NCAA Men's Basketball games"
+            }
+          }
+        },
         "dynamic_duration": {
           "type": "object",
           "title": "NCAA Men's Dynamic Duration Settings",
@@ -756,6 +858,40 @@
               "type": "boolean",
               "default": false,
               "description": "Show all live games, not just favorites"
+            }
+          }
+        },
+        "display_durations": {
+          "type": "object",
+          "description": "How long to display games on screen (in seconds)",
+          "properties": {
+            "base": {
+              "type": "number",
+              "default": 15,
+              "minimum": 5,
+              "maximum": 60,
+              "description": "Base display duration for NCAA Women's Basketball games"
+            },
+            "live": {
+              "type": "number",
+              "default": 20,
+              "minimum": 5,
+              "maximum": 120,
+              "description": "Display duration for live NCAA Women's Basketball games"
+            },
+            "recent": {
+              "type": "number",
+              "default": 15,
+              "minimum": 5,
+              "maximum": 60,
+              "description": "Display duration for recent NCAA Women's Basketball games"
+            },
+            "upcoming": {
+              "type": "number",
+              "default": 15,
+              "minimum": 5,
+              "maximum": 60,
+              "description": "Display duration for upcoming NCAA Women's Basketball games"
             }
           }
         },
