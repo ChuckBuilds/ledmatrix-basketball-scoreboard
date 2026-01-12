@@ -103,16 +103,16 @@
           "properties": {
             "recent_games_to_show": {
               "type": "integer",
-              "default": 5,
+              "default": 1,
               "minimum": 1,
-              "maximum": 20,
+              "maximum": 25,
               "description": "With favorite teams: Number of recent games PER team (e.g., 1 with 2 teams = 2 games). Without favorite teams: Total number of most recent games to show (e.g., 5 = show 5 most recent games total)."
             },
             "upcoming_games_to_show": {
               "type": "integer",
               "default": 1,
               "minimum": 1,
-              "maximum": 20,
+              "maximum": 25,
               "description": "With favorite teams: Number of upcoming games PER team (e.g., 2 with 3 teams = up to 6 games). Without favorite teams: Total number of next upcoming games to show (e.g., 1 = show only the next 1 game total)."
             }
           }
@@ -163,29 +163,29 @@
             "base": {
               "type": "number",
               "default": 15,
-              "minimum": 5,
-              "maximum": 60,
+              "minimum": 1,
+              "maximum": 120,
               "description": "Base display duration for NBA games"
             },
             "live": {
               "type": "number",
               "default": 20,
-              "minimum": 5,
+              "minimum": 1,
               "maximum": 120,
               "description": "Display duration for live NBA games"
             },
             "recent": {
               "type": "number",
               "default": 15,
-              "minimum": 5,
-              "maximum": 60,
+              "minimum": 1,
+              "maximum": 120,
               "description": "Display duration for recent NBA games"
             },
             "upcoming": {
               "type": "number",
               "default": 15,
-              "minimum": 5,
-              "maximum": 60,
+              "minimum": 1,
+              "maximum": 120,
               "description": "Display duration for upcoming NBA games"
             }
           }
@@ -359,16 +359,16 @@
           "properties": {
             "recent_games_to_show": {
               "type": "integer",
-              "default": 5,
+              "default": 1,
               "minimum": 1,
-              "maximum": 20,
+              "maximum": 25,
               "description": "With favorite teams: Number of recent games PER team (e.g., 1 with 2 teams = 2 games). Without favorite teams: Total number of most recent games to show (e.g., 5 = show 5 most recent games total)."
             },
             "upcoming_games_to_show": {
               "type": "integer",
               "default": 1,
               "minimum": 1,
-              "maximum": 20,
+              "maximum": 25,
               "description": "With favorite teams: Number of upcoming games PER team (e.g., 2 with 3 teams = up to 6 games). Without favorite teams: Total number of next upcoming games to show (e.g., 1 = show only the next 1 game total)."
             }
           }
@@ -420,7 +420,7 @@
               "type": "number",
               "default": 15,
               "minimum": 5,
-              "maximum": 60,
+              "maximum": 120,
               "description": "Base display duration for WNBA games"
             },
             "live": {
@@ -434,14 +434,14 @@
               "type": "number",
               "default": 15,
               "minimum": 5,
-              "maximum": 60,
+              "maximum": 120,
               "description": "Display duration for recent WNBA games"
             },
             "upcoming": {
               "type": "number",
               "default": 15,
               "minimum": 5,
-              "maximum": 60,
+              "maximum": 120,
               "description": "Display duration for upcoming WNBA games"
             }
           }
@@ -615,16 +615,16 @@
           "properties": {
             "recent_games_to_show": {
               "type": "integer",
-              "default": 5,
+              "default": 1,
               "minimum": 1,
-              "maximum": 20,
+              "maximum": 25,
               "description": "With favorite teams: Number of recent games PER team (e.g., 1 with 2 teams = 2 games). Without favorite teams: Total number of most recent games to show (e.g., 5 = show 5 most recent games total)."
             },
             "upcoming_games_to_show": {
               "type": "integer",
               "default": 1,
               "minimum": 1,
-              "maximum": 20,
+              "maximum": 25,
               "description": "With favorite teams: Number of upcoming games PER team (e.g., 2 with 3 teams = up to 6 games). Without favorite teams: Total number of next upcoming games to show (e.g., 1 = show only the next 1 game total)."
             }
           }
@@ -676,7 +676,7 @@
               "type": "number",
               "default": 15,
               "minimum": 5,
-              "maximum": 60,
+              "maximum": 0,
               "description": "Base display duration for NCAA Men's Basketball games"
             },
             "live": {
@@ -690,14 +690,14 @@
               "type": "number",
               "default": 15,
               "minimum": 5,
-              "maximum": 60,
+              "maximum": 120,
               "description": "Display duration for recent NCAA Men's Basketball games"
             },
             "upcoming": {
               "type": "number",
               "default": 15,
               "minimum": 5,
-              "maximum": 60,
+              "maximum": 120,
               "description": "Display duration for upcoming NCAA Men's Basketball games"
             }
           }
@@ -871,16 +871,16 @@
           "properties": {
             "recent_games_to_show": {
               "type": "integer",
-              "default": 5,
+              "default": 1,
               "minimum": 1,
-              "maximum": 20,
+              "maximum": 25,
               "description": "With favorite teams: Number of recent games PER team (e.g., 1 with 2 teams = 2 games). Without favorite teams: Total number of most recent games to show (e.g., 5 = show 5 most recent games total)."
             },
             "upcoming_games_to_show": {
               "type": "integer",
               "default": 1,
               "minimum": 1,
-              "maximum": 20,
+              "maximum": 25,
               "description": "With favorite teams: Number of upcoming games PER team (e.g., 2 with 3 teams = up to 6 games). Without favorite teams: Total number of next upcoming games to show (e.g., 1 = show only the next 1 game total)."
             }
           }
@@ -932,7 +932,7 @@
               "type": "number",
               "default": 15,
               "minimum": 5,
-              "maximum": 60,
+              "maximum": 120,
               "description": "Base display duration for NCAA Women's Basketball games"
             },
             "live": {
@@ -946,14 +946,14 @@
               "type": "number",
               "default": 15,
               "minimum": 5,
-              "maximum": 60,
+              "maximum": 120,
               "description": "Display duration for recent NCAA Women's Basketball games"
             },
             "upcoming": {
               "type": "number",
               "default": 15,
               "minimum": 5,
-              "maximum": 60,
+              "maximum": 120,
               "description": "Display duration for upcoming NCAA Women's Basketball games"
             }
           }
