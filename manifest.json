@@ -22,9 +22,18 @@
   "verified": true,
   "screenshot": "",
   "display_modes": [
-    "basketball_live",
-    "basketball_recent",
-    "basketball_upcoming"
+    "nba_recent",
+    "nba_upcoming",
+    "nba_live",
+    "wnba_recent",
+    "wnba_upcoming",
+    "wnba_live",
+    "ncaam_recent",
+    "ncaam_upcoming",
+    "ncaam_live",
+    "ncaaw_recent",
+    "ncaaw_upcoming",
+    "ncaaw_live"
   ],
   "dependencies": {},
   "entry_point": "manager.py",

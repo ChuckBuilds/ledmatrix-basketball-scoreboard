@@ -30,6 +30,34 @@
       "maximum": 60,
       "description": "Duration in seconds to show each individual game before rotating to the next game within the same mode"
     },
+    "background_service": {
+      "type": "object",
+      "title": "Background Service Settings",
+      "description": "Configuration for background data fetching service",
+      "properties": {
+        "request_timeout": {
+          "type": "number",
+          "default": 30,
+          "minimum": 1,
+          "maximum": 300,
+          "description": "Request timeout in seconds for API calls"
+        },
+        "max_retries": {
+          "type": "integer",
+          "default": 3,
+          "minimum": 0,
+          "maximum": 10,
+          "description": "Maximum number of retries for failed requests"
+        },
+        "priority": {
+          "type": "integer",
+          "default": 2,
+          "minimum": 1,
+          "maximum": 5,
+          "description": "Priority level for background requests (1=highest, 5=lowest)"
+        }
+      }
+    },
     "nba": {
       "type": "object",
       "title": "NBA Settings",
@@ -103,16 +131,16 @@
           "properties": {
             "recent_games_to_show": {
               "type": "integer",
-              "default": 5,
+              "default": 1,
               "minimum": 1,
-              "maximum": 20,
+              "maximum": 25,
               "description": "With favorite teams: Number of recent games PER team (e.g., 1 with 2 teams = 2 games). Without favorite teams: Total number of most recent games to show (e.g., 5 = show 5 most recent games total)."
             },
             "upcoming_games_to_show": {
               "type": "integer",
               "default": 1,
               "minimum": 1,
-              "maximum": 20,
+              "maximum": 25,
               "description": "With favorite teams: Number of upcoming games PER team (e.g., 2 with 3 teams = up to 6 games). Without favorite teams: Total number of next upcoming games to show (e.g., 1 = show only the next 1 game total)."
             }
           }
@@ -153,6 +181,40 @@
               "type": "boolean",
               "default": false,
               "description": "Show all live games, not just favorites"
+            }
+          }
+        },
+        "display_durations": {
+          "type": "object",
+          "description": "How long to display games on screen (in seconds)",
+          "properties": {
+            "base": {
+              "type": "number",
+              "default": 15,
+              "minimum": 1,
+              "maximum": 120,
+              "description": "Base display duration for NBA games"
+            },
+            "live": {
+              "type": "number",
+              "default": 20,
+              "minimum": 1,
+              "maximum": 120,
+              "description": "Display duration for live NBA games"
+            },
+            "recent": {
+              "type": "number",
+              "default": 15,
+              "minimum": 1,
+              "maximum": 120,
+              "description": "Display duration for recent NBA games"
+            },
+            "upcoming": {
+              "type": "number",
+              "default": 15,
+              "minimum": 1,
+              "maximum": 120,
+              "description": "Display duration for upcoming NBA games"
             }
           }
         },
@@ -226,6 +288,27 @@
                   }
                 }
               }
+            }
+          }
+        },
+        "mode_durations": {
+          "type": "object",
+          "title": "Mode-Level Durations",
+          "description": "Control total duration for each mode type for NBA. If not set, uses dynamic calculation (total_games × per_game_duration).",
+          "properties": {
+            "recent_mode_duration": {
+              "type": ["number", "null"],
+              "default": null,
+              "minimum": 10,
+              "maximum": 600,
+              "description": "Total duration in seconds for Recent mode before rotating to next mode. Default: null (uses dynamic calculation). Set to null to use dynamic calculation. When mode cycles back, continues from last game shown (no repetition)."
+            },
+            "upcoming_mode_duration": {
+              "type": ["number", "null"],
+              "default": null,
+              "minimum": 10,
+              "maximum": 600,
+              "description": "Total duration in seconds for Upcoming mode before rotating to next mode. Default: null (uses dynamic calculation). Set to null to use dynamic calculation. When mode cycles back, continues from last game shown (no repetition)."
             }
           }
         }
@@ -304,16 +387,16 @@
           "properties": {
             "recent_games_to_show": {
               "type": "integer",
-              "default": 5,
+              "default": 1,
               "minimum": 1,
-              "maximum": 20,
+              "maximum": 25,
               "description": "With favorite teams: Number of recent games PER team (e.g., 1 with 2 teams = 2 games). Without favorite teams: Total number of most recent games to show (e.g., 5 = show 5 most recent games total)."
             },
             "upcoming_games_to_show": {
               "type": "integer",
               "default": 1,
               "minimum": 1,
-              "maximum": 20,
+              "maximum": 25,
               "description": "With favorite teams: Number of upcoming games PER team (e.g., 2 with 3 teams = up to 6 games). Without favorite teams: Total number of next upcoming games to show (e.g., 1 = show only the next 1 game total)."
             }
           }
@@ -354,6 +437,40 @@
               "type": "boolean",
               "default": false,
               "description": "Show all live games, not just favorites"
+            }
+          }
+        },
+        "display_durations": {
+          "type": "object",
+          "description": "How long to display games on screen (in seconds)",
+          "properties": {
+            "base": {
+              "type": "number",
+              "default": 15,
+              "minimum": 5,
+              "maximum": 120,
+              "description": "Base display duration for WNBA games"
+            },
+            "live": {
+              "type": "number",
+              "default": 20,
+              "minimum": 5,
+              "maximum": 120,
+              "description": "Display duration for live WNBA games"
+            },
+            "recent": {
+              "type": "number",
+              "default": 15,
+              "minimum": 5,
+              "maximum": 120,
+              "description": "Display duration for recent WNBA games"
+            },
+            "upcoming": {
+              "type": "number",
+              "default": 15,
+              "minimum": 5,
+              "maximum": 120,
+              "description": "Display duration for upcoming WNBA games"
             }
           }
         },
@@ -427,6 +544,27 @@
                   }
                 }
               }
+            }
+          }
+        },
+        "mode_durations": {
+          "type": "object",
+          "title": "Mode-Level Durations",
+          "description": "Control total duration for each mode type for WNBA. If not set, uses dynamic calculation (total_games × per_game_duration).",
+          "properties": {
+            "recent_mode_duration": {
+              "type": ["number", "null"],
+              "default": null,
+              "minimum": 10,
+              "maximum": 600,
+              "description": "Total duration in seconds for Recent mode before rotating to next mode. Default: null (uses dynamic calculation). Set to null to use dynamic calculation. When mode cycles back, continues from last game shown (no repetition)."
+            },
+            "upcoming_mode_duration": {
+              "type": ["number", "null"],
+              "default": null,
+              "minimum": 10,
+              "maximum": 600,
+              "description": "Total duration in seconds for Upcoming mode before rotating to next mode. Default: null (uses dynamic calculation). Set to null to use dynamic calculation. When mode cycles back, continues from last game shown (no repetition)."
             }
           }
         }
@@ -505,16 +643,16 @@
           "properties": {
             "recent_games_to_show": {
               "type": "integer",
-              "default": 5,
+              "default": 1,
               "minimum": 1,
-              "maximum": 20,
+              "maximum": 25,
               "description": "With favorite teams: Number of recent games PER team (e.g., 1 with 2 teams = 2 games). Without favorite teams: Total number of most recent games to show (e.g., 5 = show 5 most recent games total)."
             },
             "upcoming_games_to_show": {
               "type": "integer",
               "default": 1,
               "minimum": 1,
-              "maximum": 20,
+              "maximum": 25,
               "description": "With favorite teams: Number of upcoming games PER team (e.g., 2 with 3 teams = up to 6 games). Without favorite teams: Total number of next upcoming games to show (e.g., 1 = show only the next 1 game total)."
             }
           }
@@ -555,6 +693,40 @@
               "type": "boolean",
               "default": false,
               "description": "Show all live games, not just favorites"
+            }
+          }
+        },
+        "display_durations": {
+          "type": "object",
+          "description": "How long to display games on screen (in seconds)",
+          "properties": {
+            "base": {
+              "type": "number",
+              "default": 15,
+              "minimum": 5,
+              "maximum": 120,
+              "description": "Base display duration for NCAA Men's Basketball games"
+            },
+            "live": {
+              "type": "number",
+              "default": 20,
+              "minimum": 5,
+              "maximum": 120,
+              "description": "Display duration for live NCAA Men's Basketball games"
+            },
+            "recent": {
+              "type": "number",
+              "default": 15,
+              "minimum": 5,
+              "maximum": 120,
+              "description": "Display duration for recent NCAA Men's Basketball games"
+            },
+            "upcoming": {
+              "type": "number",
+              "default": 15,
+              "minimum": 5,
+              "maximum": 120,
+              "description": "Display duration for upcoming NCAA Men's Basketball games"
             }
           }
         },
@@ -628,6 +800,27 @@
                   }
                 }
               }
+            }
+          }
+        },
+        "mode_durations": {
+          "type": "object",
+          "title": "Mode-Level Durations",
+          "description": "Control total duration for each mode type for NCAA Men's Basketball. If not set, uses dynamic calculation (total_games × per_game_duration).",
+          "properties": {
+            "recent_mode_duration": {
+              "type": ["number", "null"],
+              "default": null,
+              "minimum": 10,
+              "maximum": 600,
+              "description": "Total duration in seconds for Recent mode before rotating to next mode. Default: null (uses dynamic calculation). Set to null to use dynamic calculation. When mode cycles back, continues from last game shown (no repetition)."
+            },
+            "upcoming_mode_duration": {
+              "type": ["number", "null"],
+              "default": null,
+              "minimum": 10,
+              "maximum": 600,
+              "description": "Total duration in seconds for Upcoming mode before rotating to next mode. Default: null (uses dynamic calculation). Set to null to use dynamic calculation. When mode cycles back, continues from last game shown (no repetition)."
             }
           }
         }
@@ -706,16 +899,16 @@
           "properties": {
             "recent_games_to_show": {
               "type": "integer",
-              "default": 5,
+              "default": 1,
               "minimum": 1,
-              "maximum": 20,
+              "maximum": 25,
               "description": "With favorite teams: Number of recent games PER team (e.g., 1 with 2 teams = 2 games). Without favorite teams: Total number of most recent games to show (e.g., 5 = show 5 most recent games total)."
             },
             "upcoming_games_to_show": {
               "type": "integer",
               "default": 1,
               "minimum": 1,
-              "maximum": 20,
+              "maximum": 25,
               "description": "With favorite teams: Number of upcoming games PER team (e.g., 2 with 3 teams = up to 6 games). Without favorite teams: Total number of next upcoming games to show (e.g., 1 = show only the next 1 game total)."
             }
           }
@@ -756,6 +949,40 @@
               "type": "boolean",
               "default": false,
               "description": "Show all live games, not just favorites"
+            }
+          }
+        },
+        "display_durations": {
+          "type": "object",
+          "description": "How long to display games on screen (in seconds)",
+          "properties": {
+            "base": {
+              "type": "number",
+              "default": 15,
+              "minimum": 5,
+              "maximum": 120,
+              "description": "Base display duration for NCAA Women's Basketball games"
+            },
+            "live": {
+              "type": "number",
+              "default": 20,
+              "minimum": 5,
+              "maximum": 120,
+              "description": "Display duration for live NCAA Women's Basketball games"
+            },
+            "recent": {
+              "type": "number",
+              "default": 15,
+              "minimum": 5,
+              "maximum": 120,
+              "description": "Display duration for recent NCAA Women's Basketball games"
+            },
+            "upcoming": {
+              "type": "number",
+              "default": 15,
+              "minimum": 5,
+              "maximum": 120,
+              "description": "Display duration for upcoming NCAA Women's Basketball games"
             }
           }
         },
@@ -831,10 +1058,31 @@
               }
             }
           }
+        },
+        "mode_durations": {
+          "type": "object",
+          "title": "Mode-Level Durations",
+          "description": "Control total duration for each mode type for NCAA Women's Basketball. If not set, uses dynamic calculation (total_games × per_game_duration).",
+          "properties": {
+            "recent_mode_duration": {
+              "type": ["number", "null"],
+              "default": null,
+              "minimum": 10,
+              "maximum": 600,
+              "description": "Total duration in seconds for Recent mode before rotating to next mode. Default: null (uses dynamic calculation). Set to null to use dynamic calculation. When mode cycles back, continues from last game shown (no repetition)."
+            },
+            "upcoming_mode_duration": {
+              "type": ["number", "null"],
+              "default": null,
+              "minimum": 10,
+              "maximum": 600,
+              "description": "Total duration in seconds for Upcoming mode before rotating to next mode. Default: null (uses dynamic calculation). Set to null to use dynamic calculation. When mode cycles back, continues from last game shown (no repetition)."
+            }
+          }
         }
       }
     },
-  "customization": {
+    "customization": {
     "type": "object",
     "title": "Display Customization",
     "description": "Customize fonts for different text elements on the scoreboard",
@@ -1024,9 +1272,137 @@
         },
         "x-propertyOrder": ["font", "font_size"],
         "additionalProperties": false
+      },
+      "layout": {
+        "type": "object",
+        "title": "Layout Positioning",
+        "description": "Adjust X,Y coordinate offsets for elements. Values are relative to default positions. Use negative values to move left/up, positive to move right/down.",
+        "properties": {
+          "home_logo": {
+            "type": "object",
+            "title": "Home Team Logo",
+            "properties": {
+              "x_offset": {
+                "type": "integer",
+                "default": 0,
+                "description": "Horizontal offset from default position (default: 0)"
+              },
+              "y_offset": {
+                "type": "integer",
+                "default": 0,
+                "description": "Vertical offset from default position (default: 0)"
+              }
+            },
+            "additionalProperties": false
+          },
+          "away_logo": {
+            "type": "object",
+            "title": "Away Team Logo",
+            "properties": {
+              "x_offset": {
+                "type": "integer",
+                "default": 0,
+                "description": "Horizontal offset from default position (default: 0)"
+              },
+              "y_offset": {
+                "type": "integer",
+                "default": 0,
+                "description": "Vertical offset from default position (default: 0)"
+              }
+            },
+            "additionalProperties": false
+          },
+          "score": {
+            "type": "object",
+            "title": "Game Score",
+            "properties": {
+              "x_offset": {
+                "type": "integer",
+                "default": 0,
+                "description": "Horizontal offset from center (default: 0)"
+              },
+              "y_offset": {
+                "type": "integer",
+                "default": 0,
+                "description": "Vertical offset from center (default: 0)"
+              }
+            },
+            "additionalProperties": false
+          },
+          "status": {
+            "type": "object",
+            "title": "Game Status",
+            "properties": {
+              "x_offset": {
+                "type": "integer",
+                "default": 0,
+                "description": "Horizontal offset from default position (default: 0)"
+              },
+              "y_offset": {
+                "type": "integer",
+                "default": 0,
+                "description": "Vertical offset from default position (default: 0)"
+              }
+            },
+            "additionalProperties": false
+          },
+          "record": {
+            "type": "object",
+            "title": "Team Records",
+            "properties": {
+              "x_offset": {
+                "type": "integer",
+                "default": 0,
+                "description": "Horizontal offset from default position (default: 0)"
+              },
+              "y_offset": {
+                "type": "integer",
+                "default": 0,
+                "description": "Vertical offset from default position (default: 0)"
+              }
+            },
+            "additionalProperties": false
+          },
+          "ranking": {
+            "type": "object",
+            "title": "Team Rankings",
+            "properties": {
+              "x_offset": {
+                "type": "integer",
+                "default": 0,
+                "description": "Horizontal offset from default position (default: 0)"
+              },
+              "y_offset": {
+                "type": "integer",
+                "default": 0,
+                "description": "Vertical offset from default position (default: 0)"
+              }
+            },
+            "additionalProperties": false
+          },
+          "odds": {
+            "type": "object",
+            "title": "Betting Odds",
+            "properties": {
+              "x_offset": {
+                "type": "integer",
+                "default": 0,
+                "description": "Horizontal offset from default position (default: 0)"
+              },
+              "y_offset": {
+                "type": "integer",
+                "default": 0,
+                "description": "Vertical offset from default position (default: 0)"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "x-propertyOrder": ["home_logo", "away_logo", "score", "status", "record", "ranking", "odds"],
+        "additionalProperties": false
       }
     },
-    "x-propertyOrder": ["score_text", "period_text", "team_name", "status_text", "detail_text", "rank_text"],
+    "x-propertyOrder": ["score_text", "period_text", "team_name", "status_text", "detail_text", "rank_text", "layout"],
     "additionalProperties": false
   }
   },
