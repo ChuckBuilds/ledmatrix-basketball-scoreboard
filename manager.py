@@ -998,6 +998,11 @@ class BasketballScoreboardPlugin(BasePlugin if BasePlugin else object):
         try:
             # If display_mode is provided, use it to determine which manager to call
             if display_mode:
+                # Early exit: Skip if this mode is not in our available modes (disabled league)
+                if display_mode not in self.modes:
+                    self.logger.debug(f"Skipping disabled mode: {display_mode} (not in available modes: {self.modes})")
+                    return False
+                
                 self.logger.debug(f"Display called with mode: {display_mode}")
                 
                 # Check if this is a granular mode (league-specific, e.g., ncaam_recent, nba_live)
