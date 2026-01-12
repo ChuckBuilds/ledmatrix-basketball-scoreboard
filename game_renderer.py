@@ -94,7 +94,7 @@ class GameRenderer:
             fonts["time"] = self._load_custom_font(period_config, default_size=8)
             fonts["team"] = self._load_custom_font(team_config, default_size=8)
             fonts["status"] = self._load_custom_font(status_config, default_size=6)
-            fonts["detail"] = self._load_custom_font(detail_config, default_size=6)
+            fonts["detail"] = self._load_custom_font(detail_config, default_size=6, default_font='4x6-font.ttf')
             fonts["rank"] = self._load_custom_font(rank_config, default_size=10)
             self.logger.debug("Successfully loaded fonts from config")
         except Exception as e:
@@ -114,9 +114,9 @@ class GameRenderer:
         
         return fonts
     
-    def _load_custom_font(self, element_config: Dict[str, Any], default_size: int = 8) -> ImageFont.FreeTypeFont:
+    def _load_custom_font(self, element_config: Dict[str, Any], default_size: int = 8, default_font: str = 'PressStart2P-Regular.ttf') -> ImageFont.FreeTypeFont:
         """Load a custom font from an element configuration dictionary."""
-        font_name = element_config.get('font', 'PressStart2P-Regular.ttf')
+        font_name = element_config.get('font', default_font)
         font_size = int(element_config.get('font_size', default_size))
         font_path = os.path.join('assets', 'fonts', font_name)
         
