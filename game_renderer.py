@@ -403,48 +403,6 @@ class GameRenderer:
             except Exception:
                 pass  # Skip date/time if parsing fails
     
-    def _draw_possession_indicator(
-        self, 
-        draw: ImageDraw.Draw, 
-        game: Dict, 
-        dd_x: int, 
-        dd_width: float, 
-        dd_y: int
-    ) -> None:
-        """Draw the possession football indicator."""
-        possession = game.get("possession_indicator")
-        if not possession:
-            return
-        
-        ball_radius_x = 3
-        ball_radius_y = 2
-        ball_color = (139, 69, 19)  # Brown
-        lace_color = (255, 255, 255)  # White
-        
-        detail_font_height_approx = 6
-        ball_y_center = dd_y + (detail_font_height_approx // 2)
-        possession_ball_padding = 3
-        
-        if possession == "away":
-            ball_x_center = dd_x - possession_ball_padding - ball_radius_x
-        elif possession == "home":
-            ball_x_center = dd_x + int(dd_width) + possession_ball_padding + ball_radius_x
-        else:
-            return
-        
-        if ball_x_center > 0:
-            # Draw football shape (ellipse)
-            draw.ellipse(
-                (ball_x_center - ball_radius_x, ball_y_center - ball_radius_y,
-                 ball_x_center + ball_radius_x, ball_y_center + ball_radius_y),
-                fill=ball_color, outline=(0, 0, 0)
-            )
-            # Draw simple horizontal lace
-            draw.line(
-                (ball_x_center - 1, ball_y_center, ball_x_center + 1, ball_y_center),
-                fill=lace_color, width=1
-            )
-    
     def _draw_dynamic_odds(self, draw: ImageDraw.Draw, odds: Dict[str, Any]) -> None:
         """Draw odds with dynamic positioning."""
         try:

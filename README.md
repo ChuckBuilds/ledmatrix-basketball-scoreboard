@@ -267,16 +267,16 @@ Common abbreviations: LVA (Las Vegas Aces), NYL (New York Liberty), CHI (Chicago
 
 The plugin uses background data fetching for efficient API calls:
 
-- Requests timeout after 30 seconds (configurable via `background_service.timeout`)
-- Up to 3 retries for failed requests (configurable via `background_service.retries`)
+- Requests timeout after 30 seconds (configurable via `background_service.request_timeout`)
+- Up to 3 retries for failed requests (configurable via `background_service.max_retries`)
 - Priority level 2 (medium priority, configurable via `background_service.priority`)
 
 Configure in `background_service`:
 ```json
 {
   "background_service": {
-    "timeout": 30,
-    "retries": 3,
+    "request_timeout": 30,
+    "max_retries": 3,
     "priority": 2
   }
 }
