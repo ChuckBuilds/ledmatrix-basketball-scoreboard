@@ -1806,6 +1806,36 @@ class BasketballScoreboardPlugin(BasePlugin if BasePlugin else object):
         self._evaluate_dynamic_cycle_completion(display_mode=current_mode)
         return result
 
+    def _set_display_context_from_manager(self, manager, mode_type: str) -> None:
+        """Set current display league and mode type based on manager instance.
+        
+        Args:
+            manager: Manager instance
+            mode_type: 'live', 'recent', or 'upcoming'
+        """
+        self._current_display_mode_type = mode_type
+        
+        # Check NBA managers
+        if manager in (getattr(self, 'nba_live', None), 
+                      getattr(self, 'nba_recent', None), 
+                      getattr(self, 'nba_upcoming', None)):
+            self._current_display_league = 'nba'
+        # Check WNBA managers
+        elif manager in (getattr(self, 'wnba_live', None), 
+                        getattr(self, 'wnba_recent', None), 
+                        getattr(self, 'wnba_upcoming', None)):
+            self._current_display_league = 'wnba'
+        # Check NCAA Men's managers
+        elif manager in (getattr(self, 'ncaam_live', None), 
+                        getattr(self, 'ncaam_recent', None), 
+                        getattr(self, 'ncaam_upcoming', None)):
+            self._current_display_league = 'ncaam'
+        # Check NCAA Women's managers
+        elif manager in (getattr(self, 'ncaaw_live', None), 
+                        getattr(self, 'ncaaw_recent', None), 
+                        getattr(self, 'ncaaw_upcoming', None)):
+            self._current_display_league = 'ncaaw'
+
     def _try_manager_display(
         self, 
         manager, 
