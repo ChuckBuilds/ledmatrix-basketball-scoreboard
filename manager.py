@@ -995,25 +995,62 @@ class BasketballScoreboardPlugin(BasePlugin if BasePlugin else object):
             # If display_mode is provided, use it to determine which manager to call
             if display_mode:
                 self.logger.debug(f"Display called with mode: {display_mode}")
-                # Map external mode names to internal managers
-                # External modes: basketball_live, basketball_recent, basketball_upcoming
-                # Internal modes: nba_live, nba_recent, nba_upcoming, wnba_live, etc.
                 
-                # Extract the mode type (live, recent, upcoming)
+                # Check if this is a granular mode (league-specific, e.g., ncaam_recent, nba_live)
+                # Granular modes: {league}_{mode_type} format
+                # Known league prefixes: nba, wnba, ncaam, ncaaw
+                league = None
                 mode_type = None
-                if display_mode.endswith('_live'):
-                    mode_type = 'live'
-                elif display_mode.endswith('_recent'):
-                    mode_type = 'recent'
-                elif display_mode.endswith('_upcoming'):
-                    mode_type = 'upcoming'
+                
+                # Try to match against league registry first (most reliable)
+                mode_suffixes = ['_live', '_recent', '_upcoming']
+                for league_id in self._league_registry.keys():
+                    for mode_suffix in mode_suffixes:
+                        expected_mode = f"{league_id}{mode_suffix}"
+                        if display_mode == expected_mode:
+                            league = league_id
+                            mode_type = mode_suffix[1:]  # Remove leading underscore
+                            break
+                    if league:
+                        break
+                
+                # Fallback: parse from the end if no registry match
+                if not league:
+                    if display_mode.endswith('_live'):
+                        mode_type = 'live'
+                        potential_league = display_mode[:-5]  # Remove '_live'
+                    elif display_mode.endswith('_recent'):
+                        mode_type = 'recent'
+                        potential_league = display_mode[:-7]  # Remove '_recent'
+                    elif display_mode.endswith('_upcoming'):
+                        mode_type = 'upcoming'
+                        potential_league = display_mode[:-9]  # Remove '_upcoming'
+                    
+                    # Validate it's a known league
+                    if mode_type and potential_league in self._league_registry:
+                        league = potential_league
+                
+                # If we have a specific league, route directly to it
+                if league and mode_type:
+                    self.logger.debug(f"Granular mode detected: league={league}, mode_type={mode_type}")
+                    return self._display_league_mode(league, mode_type, force_clear)
+                
+                # Legacy combined mode handling (basketball_live, basketball_recent, basketball_upcoming)
+                # Extract the mode type for legacy modes
+                if not mode_type:
+                    if display_mode.endswith('_live'):
+                        mode_type = 'live'
+                    elif display_mode.endswith('_recent'):
+                        mode_type = 'recent'
+                    elif display_mode.endswith('_upcoming'):
+                        mode_type = 'upcoming'
                 
                 if not mode_type:
                     self.logger.warning(f"Unknown display_mode: {display_mode}")
                     return False
                 
                 self.logger.debug(
-                    f"Mode type: {mode_type}, NBA enabled: {self.nba_enabled}, "
+                    f"Legacy combined mode: mode_type={mode_type}, NBA enabled: {self.nba_enabled}, "
                     f"WNBA enabled: {self.wnba_enabled}, NCAA Men's enabled: {self.ncaam_enabled}, "
                     f"NCAA Women's enabled: {self.ncaaw_enabled}"
                 )
