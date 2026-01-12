@@ -262,6 +262,27 @@
               }
             }
           }
+        },
+        "mode_durations": {
+          "type": "object",
+          "title": "Mode-Level Durations",
+          "description": "Control total duration for each mode type for NBA. If not set, uses dynamic calculation (total_games × per_game_duration).",
+          "properties": {
+            "recent_mode_duration": {
+              "type": ["number", "null"],
+              "default": null,
+              "minimum": 10,
+              "maximum": 600,
+              "description": "Total duration in seconds for Recent mode before rotating to next mode. Default: null (uses dynamic calculation). Set to null to use dynamic calculation. When mode cycles back, continues from last game shown (no repetition)."
+            },
+            "upcoming_mode_duration": {
+              "type": ["number", "null"],
+              "default": null,
+              "minimum": 10,
+              "maximum": 600,
+              "description": "Total duration in seconds for Upcoming mode before rotating to next mode. Default: null (uses dynamic calculation). Set to null to use dynamic calculation. When mode cycles back, continues from last game shown (no repetition)."
+            }
+          }
         }
       }
     },
@@ -495,6 +516,27 @@
                   }
                 }
               }
+            }
+          }
+        },
+        "mode_durations": {
+          "type": "object",
+          "title": "Mode-Level Durations",
+          "description": "Control total duration for each mode type for WNBA. If not set, uses dynamic calculation (total_games × per_game_duration).",
+          "properties": {
+            "recent_mode_duration": {
+              "type": ["number", "null"],
+              "default": null,
+              "minimum": 10,
+              "maximum": 600,
+              "description": "Total duration in seconds for Recent mode before rotating to next mode. Default: null (uses dynamic calculation). Set to null to use dynamic calculation. When mode cycles back, continues from last game shown (no repetition)."
+            },
+            "upcoming_mode_duration": {
+              "type": ["number", "null"],
+              "default": null,
+              "minimum": 10,
+              "maximum": 600,
+              "description": "Total duration in seconds for Upcoming mode before rotating to next mode. Default: null (uses dynamic calculation). Set to null to use dynamic calculation. When mode cycles back, continues from last game shown (no repetition)."
             }
           }
         }
@@ -732,6 +774,27 @@
               }
             }
           }
+        },
+        "mode_durations": {
+          "type": "object",
+          "title": "Mode-Level Durations",
+          "description": "Control total duration for each mode type for NCAA Men's Basketball. If not set, uses dynamic calculation (total_games × per_game_duration).",
+          "properties": {
+            "recent_mode_duration": {
+              "type": ["number", "null"],
+              "default": null,
+              "minimum": 10,
+              "maximum": 600,
+              "description": "Total duration in seconds for Recent mode before rotating to next mode. Default: null (uses dynamic calculation). Set to null to use dynamic calculation. When mode cycles back, continues from last game shown (no repetition)."
+            },
+            "upcoming_mode_duration": {
+              "type": ["number", "null"],
+              "default": null,
+              "minimum": 10,
+              "maximum": 600,
+              "description": "Total duration in seconds for Upcoming mode before rotating to next mode. Default: null (uses dynamic calculation). Set to null to use dynamic calculation. When mode cycles back, continues from last game shown (no repetition)."
+            }
+          }
         }
       }
     },
@@ -967,6 +1030,27 @@
               }
             }
           }
+        },
+        "mode_durations": {
+          "type": "object",
+          "title": "Mode-Level Durations",
+          "description": "Control total duration for each mode type for NCAA Women's Basketball. If not set, uses dynamic calculation (total_games × per_game_duration).",
+          "properties": {
+            "recent_mode_duration": {
+              "type": ["number", "null"],
+              "default": null,
+              "minimum": 10,
+              "maximum": 600,
+              "description": "Total duration in seconds for Recent mode before rotating to next mode. Default: null (uses dynamic calculation). Set to null to use dynamic calculation. When mode cycles back, continues from last game shown (no repetition)."
+            },
+            "upcoming_mode_duration": {
+              "type": ["number", "null"],
+              "default": null,
+              "minimum": 10,
+              "maximum": 600,
+              "description": "Total duration in seconds for Upcoming mode before rotating to next mode. Default: null (uses dynamic calculation). Set to null to use dynamic calculation. When mode cycles back, continues from last game shown (no repetition)."
+            }
+          }
         }
       }
     },
@@ -1160,9 +1244,137 @@
         },
         "x-propertyOrder": ["font", "font_size"],
         "additionalProperties": false
+      },
+      "layout": {
+        "type": "object",
+        "title": "Layout Positioning",
+        "description": "Adjust X,Y coordinate offsets for elements. Values are relative to default positions. Use negative values to move left/up, positive to move right/down.",
+        "properties": {
+          "home_logo": {
+            "type": "object",
+            "title": "Home Team Logo",
+            "properties": {
+              "x_offset": {
+                "type": "integer",
+                "default": 0,
+                "description": "Horizontal offset from default position (default: 0)"
+              },
+              "y_offset": {
+                "type": "integer",
+                "default": 0,
+                "description": "Vertical offset from default position (default: 0)"
+              }
+            },
+            "additionalProperties": false
+          },
+          "away_logo": {
+            "type": "object",
+            "title": "Away Team Logo",
+            "properties": {
+              "x_offset": {
+                "type": "integer",
+                "default": 0,
+                "description": "Horizontal offset from default position (default: 0)"
+              },
+              "y_offset": {
+                "type": "integer",
+                "default": 0,
+                "description": "Vertical offset from default position (default: 0)"
+              }
+            },
+            "additionalProperties": false
+          },
+          "score": {
+            "type": "object",
+            "title": "Game Score",
+            "properties": {
+              "x_offset": {
+                "type": "integer",
+                "default": 0,
+                "description": "Horizontal offset from center (default: 0)"
+              },
+              "y_offset": {
+                "type": "integer",
+                "default": 0,
+                "description": "Vertical offset from center (default: 0)"
+              }
+            },
+            "additionalProperties": false
+          },
+          "status": {
+            "type": "object",
+            "title": "Game Status",
+            "properties": {
+              "x_offset": {
+                "type": "integer",
+                "default": 0,
+                "description": "Horizontal offset from default position (default: 0)"
+              },
+              "y_offset": {
+                "type": "integer",
+                "default": 0,
+                "description": "Vertical offset from default position (default: 0)"
+              }
+            },
+            "additionalProperties": false
+          },
+          "record": {
+            "type": "object",
+            "title": "Team Records",
+            "properties": {
+              "x_offset": {
+                "type": "integer",
+                "default": 0,
+                "description": "Horizontal offset from default position (default: 0)"
+              },
+              "y_offset": {
+                "type": "integer",
+                "default": 0,
+                "description": "Vertical offset from default position (default: 0)"
+              }
+            },
+            "additionalProperties": false
+          },
+          "ranking": {
+            "type": "object",
+            "title": "Team Rankings",
+            "properties": {
+              "x_offset": {
+                "type": "integer",
+                "default": 0,
+                "description": "Horizontal offset from default position (default: 0)"
+              },
+              "y_offset": {
+                "type": "integer",
+                "default": 0,
+                "description": "Vertical offset from default position (default: 0)"
+              }
+            },
+            "additionalProperties": false
+          },
+          "odds": {
+            "type": "object",
+            "title": "Betting Odds",
+            "properties": {
+              "x_offset": {
+                "type": "integer",
+                "default": 0,
+                "description": "Horizontal offset from default position (default: 0)"
+              },
+              "y_offset": {
+                "type": "integer",
+                "default": 0,
+                "description": "Vertical offset from default position (default: 0)"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "x-propertyOrder": ["home_logo", "away_logo", "score", "status", "record", "ranking", "odds"],
+        "additionalProperties": false
       }
     },
-    "x-propertyOrder": ["score_text", "period_text", "team_name", "status_text", "detail_text", "rank_text"],
+    "x-propertyOrder": ["score_text", "period_text", "team_name", "status_text", "detail_text", "rank_text", "layout"],
     "additionalProperties": false
   }
   },

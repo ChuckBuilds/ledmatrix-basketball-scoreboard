@@ -21,6 +21,14 @@ except ImportError:
     get_background_service = None
     BaseOddsManager = None
 
+# Import scroll display components
+try:
+    from scroll_display import ScrollDisplayManager
+    SCROLL_AVAILABLE = True
+except ImportError:
+    ScrollDisplayManager = None
+    SCROLL_AVAILABLE = False
+
 # Import the manager classes
 from nba_managers import NBALiveManager, NBARecentManager, NBAUpcomingManager
 from wnba_managers import WNBALiveManager, WNBARecentManager, WNBAUpcomingManager
@@ -112,6 +120,31 @@ class BasketballScoreboardPlugin(BasePlugin if BasePlugin else object):
                 self.logger.info("Background service initialized")
             except Exception as e:
                 self.logger.warning(f"Could not initialize background service: {e}")
+        
+        # Initialize scroll display manager if available
+        self._scroll_manager: Optional[ScrollDisplayManager] = None
+        if SCROLL_AVAILABLE and ScrollDisplayManager:
+            try:
+                self._scroll_manager = ScrollDisplayManager(
+                    self.display_manager,
+                    self.config,
+                    self.logger
+                )
+                self.logger.info("Scroll display manager initialized")
+            except Exception as e:
+                self.logger.warning(f"Could not initialize scroll display manager: {e}")
+                self._scroll_manager = None
+        else:
+            self.logger.debug("Scroll mode not available - ScrollDisplayManager not imported")
+        
+        # Track current scroll state
+        self._scroll_active: Dict[str, bool] = {}  # {game_type: is_active}
+        self._scroll_prepared: Dict[str, bool] = {}  # {game_type: is_prepared}
+        
+        # Enable high-FPS mode for scroll display (allows 100+ FPS scrolling)
+        self.enable_scrolling = self._scroll_manager is not None
+        if self.enable_scrolling:
+            self.logger.info("High-FPS scrolling enabled for basketball scoreboard")
 
         # Initialize managers
         self._initialize_managers()
@@ -147,6 +180,10 @@ class BasketballScoreboardPlugin(BasePlugin if BasePlugin else object):
         self._last_display_mode: Optional[str] = None  # Track previous display mode
         self._last_display_mode_time: float = 0.0  # When we last saw this mode
         self._current_active_display_mode: Optional[str] = None  # Currently active external display mode
+        
+        # Sticky manager tracking - ensures we complete all games from one league before switching
+        self._sticky_manager_per_mode: Dict[str, Any] = {}  # {display_mode: manager_instance}
+        self._sticky_manager_start_time: Dict[str, float] = {}  # {display_mode: timestamp}
         
         # Throttle logging for has_live_content() when returning False
         self._last_live_content_false_log: float = 0.0  # Timestamp of last False log
@@ -379,6 +416,46 @@ class BasketballScoreboardPlugin(BasePlugin if BasePlugin else object):
         
         return enabled_leagues
 
+    def _apply_sticky_manager_logic(self, display_mode: str, managers_to_try: list) -> list:
+        """Apply sticky manager logic to filter managers list.
+        
+        Args:
+            display_mode: External display mode name
+            managers_to_try: List of managers to try
+            
+        Returns:
+            Filtered list of managers (only sticky manager if exists and available)
+        """
+        sticky_manager = self._sticky_manager_per_mode.get(display_mode)
+        
+        self.logger.info(
+            f"Sticky manager check for {display_mode}: "
+            f"sticky={sticky_manager.__class__.__name__ if sticky_manager else None}, "
+            f"available_managers={[m.__class__.__name__ for m in managers_to_try if m]}"
+        )
+        
+        if sticky_manager and sticky_manager in managers_to_try:
+            self.logger.info(
+                f"Using sticky manager {sticky_manager.__class__.__name__} for {display_mode} - "
+                "RESTRICTING to this manager only"
+            )
+            return [sticky_manager]
+        
+        # No sticky manager or not in list - clean up if needed
+        if sticky_manager:
+            self.logger.info(
+                f"Sticky manager {sticky_manager.__class__.__name__} no longer available for {display_mode}, "
+                f"selecting new one from {len(managers_to_try)} options"
+            )
+            self._sticky_manager_per_mode.pop(display_mode, None)
+            self._sticky_manager_start_time.pop(display_mode, None)
+        else:
+            self.logger.info(
+                f"No sticky manager yet for {display_mode}, will select from {len(managers_to_try)} available managers"
+            )
+        
+        return managers_to_try
+
     def _get_managers_for_mode_type(self, mode_type: str) -> List:
         """
         Get managers in priority order for a specific mode type.
@@ -507,9 +584,6 @@ class BasketballScoreboardPlugin(BasePlugin if BasePlugin else object):
             league_config = self.config.get(league, {})
             display_modes_config = league_config.get("display_modes", {})
             
-            # Read display mode settings from config
-            # Note: Scroll mode not implemented yet, so values are read but
-            # _get_display_mode() will always return 'switch' in practice
             settings[league] = {
                 'live': display_modes_config.get('live_display_mode', 'switch'),
                 'recent': display_modes_config.get('recent_display_mode', 'switch'),
@@ -524,23 +598,17 @@ class BasketballScoreboardPlugin(BasePlugin if BasePlugin else object):
         """
         Get the display mode for a specific league and game type.
         
-        Reads the configured display mode from config, but currently always
-        returns 'switch' since scroll mode is not yet implemented.
-        
         Args:
             league: 'nba', 'wnba', 'ncaam', or 'ncaaw'
             game_type: 'live', 'recent', or 'upcoming'
             
         Returns:
-            'switch' (scroll mode not implemented, but config values are read for future support)
+            'switch' or 'scroll'
         """
-        if league not in self._display_mode_settings:
+        if not hasattr(self, '_display_mode_settings') or league not in self._display_mode_settings:
             return 'switch'
         
-        # Read from config but always return 'switch' for now (scroll mode not implemented)
-        configured_mode = self._display_mode_settings[league].get(game_type, 'switch')
-        # Scroll mode not implemented - return 'switch' regardless of config
-        return 'switch'
+        return self._display_mode_settings[league].get(game_type, 'switch')
 
     def _extract_mode_type(self, display_mode: str) -> Optional[str]:
         """Extract mode type (live, recent, upcoming) from display mode string.
@@ -1415,6 +1483,108 @@ class BasketballScoreboardPlugin(BasePlugin if BasePlugin else object):
         
         return live_modes
 
+    def _should_use_scroll_mode(self, league: str, mode_type: str) -> bool:
+        """
+        Check if a specific league should use scroll mode for this game type.
+        
+        Args:
+            league: League ID ('nba', 'wnba', 'ncaam', or 'ncaaw')
+            mode_type: 'live', 'recent', or 'upcoming'
+            
+        Returns:
+            True if this league uses scroll mode for this game type
+        """
+        return self._get_display_mode(league, mode_type) == 'scroll'
+
+    def _display_scroll_mode(self, display_mode: str, league: str, mode_type: str, force_clear: bool) -> bool:
+        """Handle display for scroll mode (single league).
+        
+        Args:
+            display_mode: External mode name (e.g., 'nba_recent')
+            league: League ID ('nba', 'wnba', 'ncaam', or 'ncaaw')
+            mode_type: Game type ('live', 'recent', 'upcoming')
+            force_clear: Whether to force clear display
+            
+        Returns:
+            True if content was displayed, False otherwise
+        """
+        if not self._scroll_manager:
+            self.logger.warning("Scroll mode requested but scroll manager not available")
+            # Fall back to switch mode
+            return self._try_manager_display(
+                self._get_league_manager_for_mode(league, mode_type),
+                force_clear,
+                display_mode,
+                mode_type,
+                None
+            )[0]
+        
+        # Check if we need to prepare new scroll content
+        scroll_key = f"{display_mode}_{mode_type}"
+        
+        if not self._scroll_prepared.get(scroll_key, False):
+            # Get manager and update it
+            manager = self._get_league_manager_for_mode(league, mode_type)
+            if not manager:
+                self.logger.debug(f"No manager available for {league} {mode_type}")
+                return False
+            
+            self._ensure_manager_updated(manager)
+            
+            # Get games from this manager
+            games = self._get_games_from_manager(manager, mode_type)
+            
+            if not games:
+                self.logger.debug(f"No games to scroll for {display_mode}")
+                self._scroll_prepared[scroll_key] = False
+                self._scroll_active[scroll_key] = False
+                return False
+            
+            # Add league info to each game
+            for game in games:
+                game['league'] = league
+            
+            # Get rankings cache for display
+            rankings = self._get_rankings_cache()
+            
+            # Prepare scroll content (single league)
+            success = self._scroll_manager.prepare_and_display(
+                games, mode_type, [league], rankings
+            )
+            
+            if success:
+                self._scroll_prepared[scroll_key] = True
+                self._scroll_active[scroll_key] = True
+                self.logger.info(
+                    f"[Basketball Scroll] Started scrolling {len(games)} {league} {mode_type} games"
+                )
+            else:
+                self._scroll_prepared[scroll_key] = False
+                self._scroll_active[scroll_key] = False
+                return False
+        
+        # Display the next scroll frame
+        if self._scroll_active.get(scroll_key, False):
+            displayed = self._scroll_manager.display_frame(mode_type)
+            
+            if displayed:
+                # Check if scroll is complete
+                if self._scroll_manager.is_complete(mode_type):
+                    self.logger.info(f"[Basketball Scroll] Cycle complete for {display_mode}")
+                    # Reset for next cycle
+                    self._scroll_prepared[scroll_key] = False
+                    self._scroll_active[scroll_key] = False
+                    # Mark cycle as complete for dynamic duration
+                    self._dynamic_cycle_complete = True
+                
+                return True
+            else:
+                # Scroll display failed
+                self._scroll_active[scroll_key] = False
+                return False
+        
+        return False
+
     def _display_league_mode(self, league: str, mode_type: str, force_clear: bool) -> bool:
         """
         Display a specific league/mode combination (e.g., NBA Recent, WNBA Upcoming).
@@ -1449,11 +1619,15 @@ class BasketballScoreboardPlugin(BasePlugin if BasePlugin else object):
         # Create display mode name for tracking
         display_mode = f"{league}_{mode_type}"
         
+        # Check if this league uses scroll mode
+        if self._should_use_scroll_mode(league, mode_type):
+            return self._display_scroll_mode(display_mode, league, mode_type, force_clear)
+        
         # Set display context for dynamic duration tracking
         self._current_display_league = league
         self._current_display_mode_type = mode_type
         
-        # Try to display content from this league's manager
+        # Try to display content from this league's manager (switch mode)
         success, _ = self._try_manager_display(
             manager, force_clear, display_mode, mode_type, None
         )
@@ -1583,14 +1757,14 @@ class BasketballScoreboardPlugin(BasePlugin if BasePlugin else object):
         force_clear: bool, 
         display_mode: str, 
         mode_type: str, 
-        sticky_manager=None  # Kept for compatibility but no longer used
+        sticky_manager=None
     ) -> Tuple[bool, Optional[str]]:
         """
         Try to display content from a single manager.
         
         This method handles displaying content from a manager and tracking progress
-        for dynamic duration. It no longer uses sticky manager logic - sequential
-        block display handles league rotation at a higher level.
+        for dynamic duration. It uses sticky manager logic to ensure all games from
+        one league are displayed before switching to another.
         
         Args:
             manager: Manager instance to try
@@ -1688,39 +1862,52 @@ class BasketballScoreboardPlugin(BasePlugin if BasePlugin else object):
             )
         
         if result is True:
-            # Manager successfully displayed content
-            # Track progress for dynamic duration system
+            # Success - track progress and set sticky manager
             manager_key = self._build_manager_key(actual_mode, manager)
             
             try:
-                # Record that we've seen this manager and track game progress
-                # This updates _dynamic_manager_progress and marks games as shown
                 self._record_dynamic_progress(manager, actual_mode=actual_mode, display_mode=display_mode)
             except Exception as progress_err:  # pylint: disable=broad-except
                 self.logger.debug(f"Dynamic progress tracking failed: {progress_err}")
             
+            # Set as sticky manager AFTER progress tracking (which may clear it on new cycle)
+            if display_mode not in self._sticky_manager_per_mode:
+                self._sticky_manager_per_mode[display_mode] = manager
+                self._sticky_manager_start_time[display_mode] = time.time()
+                self.logger.info(f"Set sticky manager {manager_class_name} for {display_mode}")
+            
             # Track which managers were used for this display mode
-            # This is used to determine when all leagues have completed
             if display_mode:
                 self._display_mode_to_managers.setdefault(display_mode, set()).add(manager_key)
             
-            # Check if this manager (league) has completed all its games
-            # If all enabled leagues complete, the display mode cycle is complete
             self._evaluate_dynamic_cycle_completion(display_mode=display_mode)
             return True, actual_mode
         
+        elif result is False and manager == sticky_manager:
+            # Sticky manager returned False - check if completed
+            manager_key = self._build_manager_key(actual_mode, manager)
+            
+            if manager_key in self._dynamic_managers_completed:
+                self.logger.info(
+                    f"Sticky manager {manager_class_name} completed all games, switching to next manager"
+                )
+                self._sticky_manager_per_mode.pop(display_mode, None)
+                self._sticky_manager_start_time.pop(display_mode, None)
+                # Signal to break out of loop and try next manager
+                return False, None
+            else:
+                # Manager not done yet, just returning False temporarily (between game switches)
+                self.logger.debug(
+                    f"Sticky manager {manager_class_name} returned False (between games), continuing"
+                )
+                return False, None
+        
         elif result is False:
-            # Manager returned False - no content available or between games
-            # In sequential block display, we'll try the next league if this one is complete
-            # The completion check happens in _display_external_mode() or display()
-            self.logger.debug(
-                f"Manager {manager_class_name} returned False - no content or between games"
-            )
+            # Non-sticky manager returned False - try next
             return False, None
         
         else:
-            # Result is None or other unexpected value - assume success
-            # This handles edge cases where managers return None instead of True/False
+            # Result is None or other - assume success
             manager_key = self._build_manager_key(actual_mode, manager)
             
             try:
