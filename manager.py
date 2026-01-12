@@ -356,11 +356,19 @@ class BasketballScoreboardPlugin(BasePlugin if BasePlugin else object):
         }
         
         # Log registry state for debugging
-        enabled_leagues = [lid for lid, data in self._league_registry.items() if data['enabled']]
+        enabled_leagues = [lid for lid, data in self._league_registry.items() if data.get('enabled', False)]
+        disabled_leagues = [lid for lid, data in self._league_registry.items() if not data.get('enabled', False)]
         self.logger.info(
             f"League registry initialized: {len(self._league_registry)} league(s) registered, "
-            f"{len(enabled_leagues)} enabled: {enabled_leagues}"
+            f"{len(enabled_leagues)} enabled: {enabled_leagues}, "
+            f"{len(disabled_leagues)} disabled: {disabled_leagues}"
         )
+        # Log detailed enabled state for each league
+        for league_id, league_data in self._league_registry.items():
+            self.logger.debug(
+                f"League {league_id}: enabled={league_data.get('enabled', False)}, "
+                f"priority={league_data.get('priority', 999)}"
+            )
 
     def _get_enabled_leagues_for_mode(self, mode_type: str) -> List[str]:
         """
@@ -814,9 +822,13 @@ class BasketballScoreboardPlugin(BasePlugin if BasePlugin else object):
         )
 
         for league_id, league_data in sorted_leagues:
-            # Check if league is enabled
-            if not league_data.get('enabled', False):
+            # Check if league is enabled - must be explicitly True
+            league_enabled = league_data.get('enabled', False)
+            if not league_enabled:
+                self.logger.debug(f"Skipping disabled league: {league_id} (enabled={league_enabled})")
                 continue
+            
+            self.logger.debug(f"Processing enabled league: {league_id}")
             
             # Get league config to check display_modes settings
             league_config = self.config.get(league_id, {})
@@ -834,11 +846,17 @@ class BasketballScoreboardPlugin(BasePlugin if BasePlugin else object):
                 
                 if mode_enabled:
                     modes.append(f"{league_id}_{mode_type}")
+                    self.logger.debug(f"Added mode: {league_id}_{mode_type}")
 
         # Default to NBA if no leagues enabled
         if not modes:
             modes = ["nba_recent", "nba_upcoming", "nba_live"]
 
+        self.logger.info(
+            f"Available modes generated: {len(modes)} mode(s) - {modes}. "
+            f"Enabled leagues: NBA={self.nba_enabled}, WNBA={self.wnba_enabled}, "
+            f"NCAA Men's={self.ncaam_enabled}, NCAA Women's={self.ncaaw_enabled}"
+        )
         return modes
 
     def _get_current_manager(self):
