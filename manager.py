@@ -146,8 +146,18 @@ class BasketballScoreboardPlugin(BasePlugin if BasePlugin else object):
         if self.enable_scrolling:
             self.logger.info("High-FPS scrolling enabled for basketball scoreboard")
 
+        # League registry: maps league IDs to their configuration and managers
+        # This structure makes it easy to add more leagues in the future
+        # Format: {league_id: {'enabled': bool, 'priority': int, 'live_priority': bool, 'managers': {...}}}
+        # The registry will be populated after managers are initialized
+        self._league_registry: Dict[str, Dict[str, Any]] = {}
+        
         # Initialize managers
         self._initialize_managers()
+        
+        # Initialize league registry after managers are created
+        # This centralizes league management and makes it easy to add more leagues
+        self._initialize_league_registry()
 
         # Mode cycling
         self.current_mode_index = 0
@@ -198,16 +208,6 @@ class BasketballScoreboardPlugin(BasePlugin if BasePlugin else object):
         # Format: {display_mode: start_time} (e.g., {'nba_recent': 1234567890.0})
         # Reset when mode changes or full cycle completes
         self._mode_start_time: Dict[str, float] = {}
-
-        # League registry: maps league IDs to their configuration and managers
-        # This structure makes it easy to add more leagues in the future
-        # Format: {league_id: {'enabled': bool, 'priority': int, 'live_priority': bool, 'managers': {...}}}
-        # The registry will be populated after managers are initialized
-        self._league_registry: Dict[str, Dict[str, Any]] = {}
-        
-        # Initialize league registry after managers are created
-        # This centralizes league management and makes it easy to add more leagues
-        self._initialize_league_registry()
         
         # Display mode settings parsing (for future scroll mode support in config schema)
         self._display_mode_settings = self._parse_display_mode_settings()
