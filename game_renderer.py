@@ -365,6 +365,14 @@ class GameRenderer:
         status_x = (self.display_width - status_width) // 2
         status_y = 1
         self._draw_text_with_outline(draw, status_text, (status_x, status_y), self.fonts['time'])
+        
+        # Game date (Bottom center)
+        game_date = game.get("game_date", "")
+        if game_date:
+            date_width = draw.textlength(game_date, font=self.fonts['detail'])
+            date_x = (self.display_width - date_width) // 2
+            date_y = self.display_height - 7
+            self._draw_text_with_outline(draw, game_date, (date_x, date_y), self.fonts['detail'])
     
     def _draw_upcoming_game_status(self, draw: ImageDraw.Draw, game: Dict) -> None:
         """Draw status elements for an upcoming basketball game."""
