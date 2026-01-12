@@ -28,6 +28,13 @@ from game_renderer import GameRenderer
 
 logger = logging.getLogger(__name__)
 
+# Pillow compatibility: Image.Resampling.LANCZOS is available in Pillow >= 9.1
+# Fall back to Image.LANCZOS for older versions
+try:
+    RESAMPLE_FILTER = Image.Resampling.LANCZOS
+except AttributeError:
+    RESAMPLE_FILTER = Image.LANCZOS
+
 
 class ScrollDisplay:
     """
@@ -216,7 +223,7 @@ class ScrollDisplay:
                 # Resize to fit height while maintaining aspect ratio
                 aspect = nba_icon.width / nba_icon.height
                 new_width = int(separator_height * aspect)
-                nba_icon = nba_icon.resize((new_width, separator_height), Image.Resampling.LANCZOS)
+                nba_icon = nba_icon.resize((new_width, separator_height), resample=RESAMPLE_FILTER)
                 self._separator_icons["nba"] = nba_icon
                 self.logger.debug(f"Loaded NBA separator icon: {new_width}x{separator_height}")
             except Exception as e:
@@ -233,7 +240,7 @@ class ScrollDisplay:
                 # Resize to fit height while maintaining aspect ratio
                 aspect = wnba_icon.width / wnba_icon.height
                 new_width = int(separator_height * aspect)
-                wnba_icon = wnba_icon.resize((new_width, separator_height), Image.Resampling.LANCZOS)
+                wnba_icon = wnba_icon.resize((new_width, separator_height), resample=RESAMPLE_FILTER)
                 self._separator_icons["wnba"] = wnba_icon
                 self.logger.debug(f"Loaded WNBA separator icon: {new_width}x{separator_height}")
             except Exception as e:
@@ -250,7 +257,7 @@ class ScrollDisplay:
                 # Resize to fit height while maintaining aspect ratio
                 aspect = ncaa_icon.width / ncaa_icon.height
                 new_width = int(separator_height * aspect)
-                ncaa_icon = ncaa_icon.resize((new_width, separator_height), Image.Resampling.LANCZOS)
+                ncaa_icon = ncaa_icon.resize((new_width, separator_height), resample=RESAMPLE_FILTER)
                 self._separator_icons["ncaam"] = ncaa_icon
                 self._separator_icons["ncaaw"] = ncaa_icon
                 self.logger.debug(f"Loaded NCAA separator icon: {new_width}x{separator_height}")

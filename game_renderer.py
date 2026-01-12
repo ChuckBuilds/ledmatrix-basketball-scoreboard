@@ -13,6 +13,13 @@ from PIL import Image, ImageDraw, ImageFont
 
 logger = logging.getLogger(__name__)
 
+# Pillow compatibility: Image.Resampling.LANCZOS is available in Pillow >= 9.1
+# Fall back to Image.LANCZOS for older versions
+try:
+    RESAMPLE_FILTER = Image.Resampling.LANCZOS
+except AttributeError:
+    RESAMPLE_FILTER = Image.LANCZOS
+
 
 class GameRenderer:
     """
@@ -148,19 +155,18 @@ class GameRenderer:
             logo_dir: Path to logo directory
         """
         for game in games:
+            league = game.get('league', 'nba')
             for team_key in ['home_abbr', 'away_abbr']:
                 abbr = game.get(team_key, '')
-                if abbr and abbr not in self._logo_cache:
-                    logo_path = game.get(f'{team_key.replace("abbr", "logo_path")}')
-                    if logo_path:
-                        logo = self._load_and_resize_logo(
-                            game.get(team_key.replace('abbr', 'id'), ''),
-                            abbr,
-                            logo_path,
-                            game.get(f'{team_key.replace("abbr", "logo_url")}')
-                        )
-                        if logo:
-                            self._logo_cache[abbr] = logo
+                if abbr:
+                    # Use league+abbrev as cache key to avoid cross-league collisions
+                    cache_key = f"{league}:{abbr}"
+                    if cache_key not in self._logo_cache:
+                        logo_path = game.get(f'{team_key.replace("abbr", "logo_path")}', '')
+                        if logo_path:
+                            logo = self._load_and_resize_logo(abbr, logo_path, league)
+                            if logo:
+                                self._logo_cache[cache_key] = logo
         
         self.logger.debug(f"Preloaded {len(self._logo_cache)} team logos")
     
@@ -170,9 +176,21 @@ class GameRenderer:
         logo_path: Path, 
         league: str = 'nba'
     ) -> Optional[Image.Image]:
-        """Load and resize a team logo with caching."""
-        if team_abbrev in self._logo_cache:
-            return self._logo_cache[team_abbrev]
+        """
+        Load and resize a team logo with caching.
+        
+        Args:
+            team_abbrev: Team abbreviation (e.g., 'LAL', 'GSW')
+            logo_path: Path to the logo file
+            league: League identifier (e.g., 'nba', 'wnba', 'ncaam', 'ncaaw')
+            
+        Returns:
+            PIL Image of the logo, or None if loading failed
+        """
+        # Use league+abbrev as cache key to avoid cross-league collisions
+        cache_key = f"{league}:{team_abbrev}"
+        if cache_key in self._logo_cache:
+            return self._logo_cache[cache_key]
         
         try:
             # Try to load from path
@@ -184,16 +202,31 @@ class GameRenderer:
                 # Resize to fit display
                 max_width = int(self.display_width * 1.5)
                 max_height = int(self.display_height * 1.5)
-                logo.thumbnail((max_width, max_height), Image.Resampling.LANCZOS)
+                logo.thumbnail((max_width, max_height), resample=RESAMPLE_FILTER)
                 
-                self._logo_cache[team_abbrev] = logo
+                self._logo_cache[cache_key] = logo
                 return logo
             else:
-                self.logger.debug(f"Logo not found at {logo_path}")
-                return None
+                # Try to load from league-specific logo directory
+                logo_dir = Path(self.logo_dirs.get(league, 'assets/sports/nba_logos'))
+                logo_file = logo_dir / f"{team_abbrev}.png"
+                if logo_file.exists():
+                    logo = Image.open(logo_file)
+                    if logo.mode != "RGBA":
+                        logo = logo.convert("RGBA")
+                    
+                    max_width = int(self.display_width * 1.5)
+                    max_height = int(self.display_height * 1.5)
+                    logo.thumbnail((max_width, max_height), resample=RESAMPLE_FILTER)
+                    
+                    self._logo_cache[cache_key] = logo
+                    return logo
+                else:
+                    self.logger.debug(f"Logo not found at {logo_path} or {logo_file}")
+                    return None
                 
         except Exception as e:
-            self.logger.error(f"Error loading logo for {team_abbrev}: {e}")
+            self.logger.error(f"Error loading logo for {team_abbrev} (league: {league}): {e}")
             return None
     
     def _draw_text_with_outline(
@@ -241,15 +274,19 @@ class GameRenderer:
         home_abbr = home_team.get('abbrev', '')
         away_abbr = away_team.get('abbrev', '')
         
-        # Load logos
+        # Get logo paths from team data if available, otherwise construct from logo_dir
+        home_logo_path = home_team.get('logo_path', logo_dir / f"{home_abbr}.png")
+        away_logo_path = away_team.get('logo_path', logo_dir / f"{away_abbr}.png")
+        
+        # Load logos (using league+abbrev for cache key)
         home_logo = self._load_and_resize_logo(
             home_abbr,
-            logo_dir / f"{home_abbr}.png",
+            home_logo_path,
             league
         )
         away_logo = self._load_and_resize_logo(
             away_abbr,
-            logo_dir / f"{away_abbr}.png",
+            away_logo_path,
             league
         )
         
