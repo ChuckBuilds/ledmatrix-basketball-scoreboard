@@ -338,7 +338,7 @@ class GameRenderer:
         return main_img.convert('RGB')
     
     def _draw_live_game_status(self, draw: ImageDraw.Draw, game: Dict) -> None:
-        """Draw status elements for a live hockey game."""
+        """Draw status elements for a live basketball game."""
         # Period and Clock (Top center)
         status = game.get('status', {})
         period = status.get('period', 0)
@@ -358,7 +358,7 @@ class GameRenderer:
         self._draw_text_with_outline(draw, period_clock_text, (status_x, status_y), self.fonts['time'])
     
     def _draw_recent_game_status(self, draw: ImageDraw.Draw, game: Dict) -> None:
-        """Draw status elements for a recently completed hockey game."""
+        """Draw status elements for a recently completed basketball game."""
         # Final status (Top center)
         status_text = "Final"
         status_width = draw.textlength(status_text, font=self.fonts['time'])
@@ -367,7 +367,7 @@ class GameRenderer:
         self._draw_text_with_outline(draw, status_text, (status_x, status_y), self.fonts['time'])
     
     def _draw_upcoming_game_status(self, draw: ImageDraw.Draw, game: Dict) -> None:
-        """Draw status elements for an upcoming hockey game."""
+        """Draw status elements for an upcoming basketball game."""
         # Next Game text (Top center)
         status_text = "Next Game"
         status_font = self.fonts['status']
@@ -443,33 +443,6 @@ class GameRenderer:
             draw.line(
                 (ball_x_center - 1, ball_y_center, ball_x_center + 1, ball_y_center),
                 fill=lace_color, width=1
-            )
-    
-    def _draw_timeouts(self, draw: ImageDraw.Draw, game: Dict) -> None:
-        """Draw timeout indicators at bottom corners."""
-        timeout_bar_width = 4
-        timeout_bar_height = 2
-        timeout_spacing = 1
-        timeout_y = self.display_height - timeout_bar_height - 1
-        
-        # Away Timeouts (Bottom Left)
-        away_timeouts_remaining = game.get("away_timeouts", 0)
-        for i in range(3):
-            to_x = 2 + i * (timeout_bar_width + timeout_spacing)
-            color = (255, 255, 255) if i < away_timeouts_remaining else (80, 80, 80)
-            draw.rectangle(
-                [to_x, timeout_y, to_x + timeout_bar_width, timeout_y + timeout_bar_height],
-                fill=color, outline=(0, 0, 0)
-            )
-        
-        # Home Timeouts (Bottom Right)
-        home_timeouts_remaining = game.get("home_timeouts", 0)
-        for i in range(3):
-            to_x = self.display_width - 2 - timeout_bar_width - (2 - i) * (timeout_bar_width + timeout_spacing)
-            color = (255, 255, 255) if i < home_timeouts_remaining else (80, 80, 80)
-            draw.rectangle(
-                [to_x, timeout_y, to_x + timeout_bar_width, timeout_y + timeout_bar_height],
-                fill=color, outline=(0, 0, 0)
             )
     
     def _draw_dynamic_odds(self, draw: ImageDraw.Draw, odds: Dict[str, Any]) -> None:
