@@ -1054,7 +1054,7 @@
         }
       }
     },
-  "customization": {
+    "customization": {
     "type": "object",
     "title": "Display Customization",
     "description": "Customize fonts for different text elements on the scoreboard",
