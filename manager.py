@@ -363,10 +363,10 @@ class BasketballScoreboardPlugin(BasePlugin if BasePlugin else object):
             f"{len(enabled_leagues)} enabled: {enabled_leagues}, "
             f"{len(disabled_leagues)} disabled: {disabled_leagues}"
         )
-        # Log detailed enabled state for each league
+        # Log detailed enabled state for each league (INFO level for visibility)
         for league_id, league_data in self._league_registry.items():
-            self.logger.debug(
-                f"League {league_id}: enabled={league_data.get('enabled', False)}, "
+            self.logger.info(
+                f"League {league_id}: enabled={league_data.get('enabled', False)} (type: {type(league_data.get('enabled', False))}), "
                 f"priority={league_data.get('priority', 999)}"
             )
 
@@ -824,11 +824,15 @@ class BasketballScoreboardPlugin(BasePlugin if BasePlugin else object):
         for league_id, league_data in sorted_leagues:
             # Check if league is enabled - must be explicitly True
             league_enabled = league_data.get('enabled', False)
+            self.logger.info(
+                f"_get_available_modes: Checking {league_id}: enabled={league_enabled} "
+                f"(type: {type(league_enabled)}, bool check: {bool(league_enabled)})"
+            )
             if not league_enabled:
-                self.logger.debug(f"Skipping disabled league: {league_id} (enabled={league_enabled})")
+                self.logger.info(f"Skipping disabled league: {league_id} (enabled={league_enabled})")
                 continue
             
-            self.logger.debug(f"Processing enabled league: {league_id}")
+            self.logger.info(f"Processing enabled league: {league_id}")
             
             # Get league config to check display_modes settings
             league_config = self.config.get(league_id, {})
