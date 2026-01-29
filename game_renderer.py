@@ -98,7 +98,7 @@ class GameRenderer:
             fonts["rank"] = self._load_custom_font(rank_config, default_size=10)
             self.logger.debug("Successfully loaded fonts from config")
         except Exception as e:
-            self.logger.error(f"Error loading fonts: {e}, using defaults")
+            self.logger.exception("Error loading fonts, using defaults")
             # Fallback to hardcoded defaults
             try:
                 fonts["score"] = ImageFont.truetype("assets/fonts/PressStart2P-Regular.ttf", 10)
@@ -130,7 +130,7 @@ class GameRenderer:
                     except Exception:
                         self.logger.warning(f"Could not load BDF font {font_name}, using default")
         except Exception as e:
-            self.logger.error(f"Error loading font {font_name}: {e}")
+            self.logger.exception(f"Error loading font {font_name}")
         
         # Fallback to default font
         default_font_path = os.path.join('assets', 'fonts', 'PressStart2P-Regular.ttf')
@@ -195,15 +195,18 @@ class GameRenderer:
         try:
             # Try to load from path
             if logo_path and os.path.exists(logo_path):
-                logo = Image.open(logo_path)
-                if logo.mode != "RGBA":
-                    logo = logo.convert("RGBA")
-                
-                # Resize to fit display
-                max_width = int(self.display_width * 1.5)
-                max_height = int(self.display_height * 1.5)
-                logo.thumbnail((max_width, max_height), resample=RESAMPLE_FILTER)
-                
+                with Image.open(logo_path) as img:
+                    if img.mode != "RGBA":
+                        img = img.convert("RGBA")
+
+                    # Resize to fit display
+                    max_width = int(self.display_width * 1.5)
+                    max_height = int(self.display_height * 1.5)
+                    img.thumbnail((max_width, max_height), resample=RESAMPLE_FILTER)
+
+                    # Copy before context manager closes file handle
+                    logo = img.copy()
+
                 self._logo_cache[cache_key] = logo
                 return logo
             else:
@@ -211,22 +214,25 @@ class GameRenderer:
                 logo_dir = Path(self.logo_dirs.get(league, 'assets/sports/nba_logos'))
                 logo_file = logo_dir / f"{team_abbrev}.png"
                 if logo_file.exists():
-                    logo = Image.open(logo_file)
-                    if logo.mode != "RGBA":
-                        logo = logo.convert("RGBA")
-                    
-                    max_width = int(self.display_width * 1.5)
-                    max_height = int(self.display_height * 1.5)
-                    logo.thumbnail((max_width, max_height), resample=RESAMPLE_FILTER)
-                    
+                    with Image.open(logo_file) as img:
+                        if img.mode != "RGBA":
+                            img = img.convert("RGBA")
+
+                        max_width = int(self.display_width * 1.5)
+                        max_height = int(self.display_height * 1.5)
+                        img.thumbnail((max_width, max_height), resample=RESAMPLE_FILTER)
+
+                        # Copy before context manager closes file handle
+                        logo = img.copy()
+
                     self._logo_cache[cache_key] = logo
                     return logo
                 else:
                     self.logger.debug(f"Logo not found at {logo_path} or {logo_file}")
                     return None
-                
+
         except Exception as e:
-            self.logger.error(f"Error loading logo for {team_abbrev} (league: {league}): {e}")
+            self.logger.exception(f"Error loading logo for {team_abbrev} (league: {league})")
             return None
     
     def _draw_text_with_outline(
@@ -477,7 +483,7 @@ class GameRenderer:
                 self._draw_text_with_outline(draw, ou_text, (ou_x, ou_y), font, fill=(0, 255, 0))
                 
         except Exception as e:
-            self.logger.error(f"Error drawing odds: {e}")
+            self.logger.exception("Error drawing odds")
     
     def _draw_records_or_rankings(self, draw: ImageDraw.Draw, game: Dict) -> None:
         """Draw team records or rankings."""
