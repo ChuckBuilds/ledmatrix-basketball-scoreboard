@@ -3109,24 +3109,6 @@ class BasketballScoreboardPlugin(BasePlugin if BasePlugin else object):
     # -------------------------------------------------------------------------
     # Scroll mode helper methods
     # -------------------------------------------------------------------------
-    def _should_use_scroll_mode(self, mode_type: str) -> bool:
-        """
-        Check if scroll mode should be used for a given mode type.
-
-        Args:
-            mode_type: Mode type ('live', 'recent', 'upcoming')
-
-        Returns:
-            True if scroll mode should be used, False otherwise
-        """
-        # Check if scroll manager is available
-        if not self._scroll_manager:
-            return False
-
-        # Check if scroll mode is enabled in config
-        # For now, assume scroll mode is always preferred if available
-        return True
-
     def _collect_games_for_scroll(
         self,
         mode_type: str = None,

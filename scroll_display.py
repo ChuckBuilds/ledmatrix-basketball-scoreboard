@@ -246,7 +246,7 @@ class ScrollDisplay:
                     self._separator_icons[key] = resized_icon
                 self.logger.debug(f"Loaded {display_name} separator icon: {new_width}x{separator_height}")
         except Exception as e:
-            self.logger.exception(f"Error loading {display_name} separator icon: {e}")
+            self.logger.exception(f"Error loading {display_name} separator icon")
 
     def _load_separator_icons(self) -> None:
         """Load and resize league separator icons."""
@@ -321,6 +321,11 @@ class ScrollDisplay:
         gap_between_games = scroll_settings.get("gap_between_games", 24)
         show_separators = scroll_settings.get("show_league_separators", True)
 
+        # Verify GameRenderer is available
+        if GameRenderer is None:
+            self.logger.error("GameRenderer not available - cannot prepare scroll content")
+            return False
+
         # Create game renderer
         renderer = GameRenderer(
             self.display_width,
@@ -384,7 +389,7 @@ class ScrollDisplay:
                 game_count += 1
                 league_counts[game_league] = league_counts.get(game_league, 0) + 1
             except Exception as e:
-                self.logger.exception(f"Error rendering game card: {e}")
+                self.logger.exception("Error rendering game card")
                 continue
         
         if not content_items:
@@ -448,7 +453,7 @@ class ScrollDisplay:
             
             return True
         except Exception as e:
-            self.logger.exception(f"Error displaying scroll frame: {e}")
+            self.logger.exception("Error displaying scroll frame")
             return False
     
     def _log_scroll_progress(self) -> None:

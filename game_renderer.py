@@ -98,7 +98,7 @@ class GameRenderer:
             fonts["rank"] = self._load_custom_font(rank_config, default_size=10)
             self.logger.debug("Successfully loaded fonts from config")
         except Exception as e:
-            self.logger.exception(f"Error loading fonts: {e}, using defaults")
+            self.logger.exception("Error loading fonts, using defaults")
             # Fallback to hardcoded defaults
             try:
                 fonts["score"] = ImageFont.truetype("assets/fonts/PressStart2P-Regular.ttf", 10)
@@ -130,7 +130,7 @@ class GameRenderer:
                     except Exception:
                         self.logger.warning(f"Could not load BDF font {font_name}, using default")
         except Exception as e:
-            self.logger.exception(f"Error loading font {font_name}: {e}")
+            self.logger.exception(f"Error loading font {font_name}")
         
         # Fallback to default font
         default_font_path = os.path.join('assets', 'fonts', 'PressStart2P-Regular.ttf')
@@ -232,7 +232,7 @@ class GameRenderer:
                     return None
 
         except Exception as e:
-            self.logger.exception(f"Error loading logo for {team_abbrev} (league: {league}): {e}")
+            self.logger.exception(f"Error loading logo for {team_abbrev} (league: {league})")
             return None
     
     def _draw_text_with_outline(
@@ -483,7 +483,7 @@ class GameRenderer:
                 self._draw_text_with_outline(draw, ou_text, (ou_x, ou_y), font, fill=(0, 255, 0))
                 
         except Exception as e:
-            self.logger.exception(f"Error drawing odds: {e}")
+            self.logger.exception("Error drawing odds")
     
     def _draw_records_or_rankings(self, draw: ImageDraw.Draw, game: Dict) -> None:
         """Draw team records or rankings."""
