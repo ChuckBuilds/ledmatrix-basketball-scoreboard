@@ -24,7 +24,10 @@ try:
 except ImportError:
     ScrollHelper = None
 
-from game_renderer import GameRenderer
+try:
+    from game_renderer import GameRenderer
+except ImportError:
+    GameRenderer = None
 
 logger = logging.getLogger(__name__)
 
@@ -210,61 +213,55 @@ class ScrollDisplay:
         
         return defaults
     
+    def _load_separator_icon(
+        self,
+        icon_path: str,
+        league_keys: List[str],
+        separator_height: int,
+        display_name: str
+    ) -> None:
+        """
+        Load and resize a single separator icon.
+
+        Args:
+            icon_path: Path to the icon file
+            league_keys: List of league keys to associate with this icon
+            separator_height: Target height for the icon
+            display_name: Name for logging purposes
+        """
+        if not os.path.exists(icon_path):
+            self.logger.warning(f"{display_name} separator icon not found at {icon_path}")
+            return
+
+        try:
+            with Image.open(icon_path) as icon:
+                if icon.mode != "RGBA":
+                    icon = icon.convert("RGBA")
+                # Resize to fit height while maintaining aspect ratio
+                aspect = icon.width / icon.height
+                new_width = int(separator_height * aspect)
+                resized_icon = icon.resize((new_width, separator_height), resample=RESAMPLE_FILTER)
+                # Store for each league key
+                for key in league_keys:
+                    self._separator_icons[key] = resized_icon
+                self.logger.debug(f"Loaded {display_name} separator icon: {new_width}x{separator_height}")
+        except Exception as e:
+            self.logger.exception(f"Error loading {display_name} separator icon: {e}")
+
     def _load_separator_icons(self) -> None:
         """Load and resize league separator icons."""
         separator_height = self.display_height - 4  # Leave some padding
-        
-        # Load NBA icon
-        if os.path.exists(self.NBA_SEPARATOR_ICON):
-            try:
-                nba_icon = Image.open(self.NBA_SEPARATOR_ICON)
-                if nba_icon.mode != "RGBA":
-                    nba_icon = nba_icon.convert("RGBA")
-                # Resize to fit height while maintaining aspect ratio
-                aspect = nba_icon.width / nba_icon.height
-                new_width = int(separator_height * aspect)
-                nba_icon = nba_icon.resize((new_width, separator_height), resample=RESAMPLE_FILTER)
-                self._separator_icons["nba"] = nba_icon
-                self.logger.debug(f"Loaded NBA separator icon: {new_width}x{separator_height}")
-            except Exception as e:
-                self.logger.error(f"Error loading NBA separator icon: {e}")
-        else:
-            self.logger.warning(f"NBA separator icon not found at {self.NBA_SEPARATOR_ICON}")
-        
-        # Load WNBA icon
-        if os.path.exists(self.WNBA_SEPARATOR_ICON):
-            try:
-                wnba_icon = Image.open(self.WNBA_SEPARATOR_ICON)
-                if wnba_icon.mode != "RGBA":
-                    wnba_icon = wnba_icon.convert("RGBA")
-                # Resize to fit height while maintaining aspect ratio
-                aspect = wnba_icon.width / wnba_icon.height
-                new_width = int(separator_height * aspect)
-                wnba_icon = wnba_icon.resize((new_width, separator_height), resample=RESAMPLE_FILTER)
-                self._separator_icons["wnba"] = wnba_icon
-                self.logger.debug(f"Loaded WNBA separator icon: {new_width}x{separator_height}")
-            except Exception as e:
-                self.logger.error(f"Error loading WNBA separator icon: {e}")
-        else:
-            self.logger.warning(f"WNBA separator icon not found at {self.WNBA_SEPARATOR_ICON}")
-        
-        # Load NCAA icon (used for both men's and women's)
-        if os.path.exists(self.NCAA_SEPARATOR_ICON):
-            try:
-                ncaa_icon = Image.open(self.NCAA_SEPARATOR_ICON)
-                if ncaa_icon.mode != "RGBA":
-                    ncaa_icon = ncaa_icon.convert("RGBA")
-                # Resize to fit height while maintaining aspect ratio
-                aspect = ncaa_icon.width / ncaa_icon.height
-                new_width = int(separator_height * aspect)
-                ncaa_icon = ncaa_icon.resize((new_width, separator_height), resample=RESAMPLE_FILTER)
-                self._separator_icons["ncaam"] = ncaa_icon
-                self._separator_icons["ncaaw"] = ncaa_icon
-                self.logger.debug(f"Loaded NCAA separator icon: {new_width}x{separator_height}")
-            except Exception as e:
-                self.logger.error(f"Error loading NCAA separator icon: {e}")
-        else:
-            self.logger.warning(f"NCAA separator icon not found at {self.NCAA_SEPARATOR_ICON}")
+
+        # Load all separator icons using helper
+        self._load_separator_icon(
+            self.NBA_SEPARATOR_ICON, ["nba"], separator_height, "NBA"
+        )
+        self._load_separator_icon(
+            self.WNBA_SEPARATOR_ICON, ["wnba"], separator_height, "WNBA"
+        )
+        self._load_separator_icon(
+            self.NCAA_SEPARATOR_ICON, ["ncaam", "ncaaw"], separator_height, "NCAA"
+        )
     
     def _determine_game_type(self, game: Dict) -> str:
         """
@@ -387,7 +384,7 @@ class ScrollDisplay:
                 game_count += 1
                 league_counts[game_league] = league_counts.get(game_league, 0) + 1
             except Exception as e:
-                self.logger.error(f"Error rendering game card: {e}")
+                self.logger.exception(f"Error rendering game card: {e}")
                 continue
         
         if not content_items:
@@ -451,7 +448,7 @@ class ScrollDisplay:
             
             return True
         except Exception as e:
-            self.logger.error(f"Error displaying scroll frame: {e}")
+            self.logger.exception(f"Error displaying scroll frame: {e}")
             return False
     
     def _log_scroll_progress(self) -> None:
@@ -651,7 +648,20 @@ class ScrollDisplayManager:
             return 60
         
         return scroll_display.get_dynamic_duration()
-    
+
+    def has_cached_content(self) -> bool:
+        """
+        Check if any scroll display has cached content.
+
+        Returns:
+            True if any scroll display has a cached image ready for display
+        """
+        for scroll_display in self._scroll_displays.values():
+            if hasattr(scroll_display, 'scroll_helper') and scroll_display.scroll_helper:
+                if scroll_display.scroll_helper.cached_image is not None:
+                    return True
+        return False
+
     def clear_all(self) -> None:
         """Clear all scroll displays."""
         for scroll_display in self._scroll_displays.values():
