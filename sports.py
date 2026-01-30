@@ -786,7 +786,7 @@ class SportsCore(ABC):
                 away_abbr = away_team["team"]["name"][:3]
 
             # Check if this is a favorite team game BEFORE doing expensive logging
-            is_favorite_game = (
+            is_favorite_game = self.favorite_teams and (
                 home_abbr in self.favorite_teams or away_abbr in self.favorite_teams
             )
 
@@ -1218,9 +1218,8 @@ class SportsUpcoming(SportsCore):
                 # Filter criteria: must be upcoming ('pre' state)
                 if game and game["is_upcoming"]:
                     # Only fetch odds for games that will be displayed
-                    if self.show_favorite_teams_only:
-                        if not self.favorite_teams:
-                            continue
+                    # If show_favorite_teams_only is True but no favorites configured, show all
+                    if self.show_favorite_teams_only and self.favorite_teams:
                         if (
                             game["home_abbr"] not in self.favorite_teams
                             and game["away_abbr"] not in self.favorite_teams
@@ -1228,7 +1227,7 @@ class SportsUpcoming(SportsCore):
                             continue
                     processed_games.append(game)
                     # Count favorite team games for logging
-                    if (
+                    if self.favorite_teams and (
                         game["home_abbr"] in self.favorite_teams
                         or game["away_abbr"] in self.favorite_teams
                     ):
