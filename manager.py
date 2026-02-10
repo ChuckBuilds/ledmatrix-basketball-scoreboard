@@ -14,7 +14,7 @@ from PIL import ImageFont
 
 try:
     from src.plugin_system.base_plugin import BasePlugin, VegasDisplayMode
-    from background_data_service import get_background_service
+    from src.background_data_service import get_background_service
     from base_odds_manager import BaseOddsManager
 except ImportError:
     BasePlugin = None
