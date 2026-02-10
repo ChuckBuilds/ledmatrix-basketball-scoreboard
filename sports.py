@@ -146,7 +146,7 @@ class SportsCore(ABC):
         # Initialize background data service with optimized settings
         # Hardcoded for memory optimization: 1 worker, 30s timeout, 3 retries
         try:
-            from background_data_service import get_background_service
+            from src.background_data_service import get_background_service
 
             self.background_service = get_background_service(
                 self.cache_manager, max_workers=1
