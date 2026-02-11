@@ -728,6 +728,27 @@ class SportsCore(ABC):
             self.logger.error(f"Error fetching team rankings/standings: {e}")
             return {}
 
+    @staticmethod
+    def _extract_team_record(team_data: Dict) -> str:
+        """Extract the overall record string from a competitor/team object.
+
+        The ESPN scoreboard API uses ``records`` (plural) with a ``summary``
+        field, while the team-schedule API uses ``record`` (singular) with a
+        ``displayValue`` field.  This helper handles both formats so that
+        records display correctly regardless of which API provided the data.
+        """
+        # Scoreboard API format: records[0].summary  (e.g. "21-2")
+        records = team_data.get("records")
+        if records and isinstance(records, list) and len(records) > 0:
+            return records[0].get("summary", "")
+
+        # Team-schedule API format: record[0].displayValue  (e.g. "7-0")
+        record = team_data.get("record")
+        if record and isinstance(record, list) and len(record) > 0:
+            return record[0].get("displayValue", record[0].get("summary", ""))
+
+        return ""
+
     def _extract_game_details_common(
         self, game_event: Dict
     ) -> tuple[Dict | None, Dict | None, Dict | None, Dict | None, Dict | None]:
@@ -814,16 +835,8 @@ class SportsCore(ABC):
                     # Note: display_manager.format_date_with_ordinal will be handled by plugin wrapper
                     game_date = local_time.strftime("%m/%d")  # Simplified for plugin
 
-            home_record = (
-                home_team.get("records", [{}])[0].get("summary", "")
-                if home_team.get("records")
-                else ""
-            )
-            away_record = (
-                away_team.get("records", [{}])[0].get("summary", "")
-                if away_team.get("records")
-                else ""
-            )
+            home_record = self._extract_team_record(home_team)
+            away_record = self._extract_team_record(away_team)
 
             # Don't show "0-0" records - set to blank instead
             if home_record in {"0-0", "0-0-0"}:
